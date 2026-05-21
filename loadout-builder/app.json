@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Loadout Builder",
+    "slug": "loadout-builder",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "loadoutbuilder",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0d0f14"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
