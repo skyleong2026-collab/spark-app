@@ -10,6 +10,7 @@ import FeedbackFollowup from './pages/FeedbackFollowup'
 import TestSynthesis from './pages/admin/TestSynthesis'
 import AdminRoute from './components/AdminRoute'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import { GameContainer } from './games/eightgents'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/signin" element={<SignIn />} />
       <Route path="/feedback/followup" element={<FeedbackFollowup />} />
       <Route path="/admin/test-synthesis" element={<TestSynthesis />} />
+      <Route path="/games/8gents" element={<GameContainer />} />
       <Route element={<AdminRoute />}>
         <Route path="/admin" element={<AdminDashboard />} />
       </Route>
