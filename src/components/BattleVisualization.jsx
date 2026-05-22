@@ -13,6 +13,8 @@ export default function BattleVisualization() {
   const [unitStates, setUnitStates] = useState({});
   const [currentEvent, setCurrentEvent] = useState(null);
   const [turnText, setTurnText] = useState('');
+  const [battleCount, setBattleCount] = useState(1);
+  const [autoReplay, setAutoReplay] = useState(false);
 
   // Initialize battle
   useEffect(() => {
@@ -83,14 +85,41 @@ export default function BattleVisualization() {
           setTurnText(`Turn ${event.round}`);
         }
 
+        if (event.type === 'battle_end' && autoReplay && battleCount < 20) {
+          // Auto-start next battle after brief delay
+          setTimeout(() => {
+            const { events, finalUnits } = simulateBattle(PLAYER_TEAM, ENEMY_TEAM);
+            setBattleData({ events });
+            const initialStates = {};
+            finalUnits.forEach(u => {
+              initialStates[u.id] = {
+                hp: u.maxHp,
+                maxHp: u.maxHp,
+                mark: false,
+                shock: 0,
+                burn: 0,
+                shield: u.archtype === 'thornwall' ? 30 : 0,
+                stunned: 0
+              };
+            });
+            setUnitStates(initialStates);
+            setEventIndex(0);
+            setBattleCount(c => c + 1);
+            setIsPlaying(true);
+          }, 1500);
+          return;
+        }
+
         setEventIndex(eventIndex + 1);
       } else {
-        setIsPlaying(false);
+        if (!autoReplay) {
+          setIsPlaying(false);
+        }
       }
     }, Math.max(50, 300 / speed));
 
     return () => clearTimeout(timer);
-  }, [isPlaying, eventIndex, battleData, speed]);
+  }, [isPlaying, eventIndex, battleData, speed, autoReplay, battleCount]);
 
   if (!battleData) return <div className="battle-loading">Loading battle...</div>;
 
@@ -176,7 +205,16 @@ export default function BattleVisualization() {
         <button onClick={() => setIsPlaying(!isPlaying)}>
           {isPlaying ? '⏸ Pause' : '▶ Play'}
         </button>
-        <button onClick={() => { setEventIndex(0); setIsPlaying(false); }}>⟲ Restart</button>
+        <button onClick={() => { setEventIndex(0); setIsPlaying(false); setBattleCount(1); }}>⟲ Restart</button>
+        <button
+          onClick={() => {
+            setAutoReplay(!autoReplay);
+            if (!autoReplay) setIsPlaying(true);
+          }}
+          style={{ background: autoReplay ? '#10b981' : '#3b82f6' }}
+        >
+          {autoReplay ? '🔄 Auto-Replay ON' : '▶ Auto-Replay OFF'}
+        </button>
         <div className="speed-control">
           <label>Speed:</label>
           <select value={speed} onChange={e => setSpeed(parseFloat(e.target.value))}>
@@ -185,7 +223,7 @@ export default function BattleVisualization() {
             <option value={2}>2x</option>
           </select>
         </div>
-        <div className="progress-text">{eventIndex} / {battleData.events.length}</div>
+        <div className="progress-text">Battle {battleCount}/20 | Event {eventIndex} / {battleData.events.length}</div>
       </div>
     </div>
   );
