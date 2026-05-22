@@ -1,73 +1,59 @@
+/* ── Outer shell ───────────────────────────────────────── */
 .battle-visualization {
-  width: 100%;
-  max-width: 1000px;
+  width: 760px;
   margin: 0 auto;
   padding: 20px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  border-radius: 8px;
+  background: linear-gradient(160deg, #0b1120 0%, #111827 100%);
+  border-radius: 10px;
   color: #e2e8f0;
-  font-family: 'Monaco', 'Courier New', monospace;
+  font-family: 'Monaco', 'Menlo', monospace;
+  user-select: none;
 }
 
+/* ── Turn indicator ────────────────────────────────────── */
 .turn-indicator {
   text-align: center;
-  font-size: 18px;
+  font-size: 13px;
   font-weight: bold;
   color: #60a5fa;
-  margin-bottom: 20px;
-  height: 24px;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  height: 18px;
+  text-transform: uppercase;
 }
 
-.battle-grid {
-  display: flex;
-  justify-content: space-between;
-  gap: 40px;
-  margin-bottom: 30px;
-  padding: 20px;
-  background: rgba(15, 23, 42, 0.6);
+/* ── Battle arena — fixed coordinate space ─────────────── */
+.battle-arena {
+  position: relative;
+  width: 720px;
+  height: 300px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid #1e3a5f;
   border-radius: 8px;
-  border: 1px solid #334155;
+  margin-bottom: 12px;
+  overflow: visible;
 }
 
-.team {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* SVG sits behind units — do NOT set pointer-events */
+.rel-svg {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
 }
 
 .team-label {
-  font-size: 12px;
+  position: absolute;
+  top: 8px;
+  font-size: 9px;
   font-weight: bold;
-  color: #94a3b8;
+  letter-spacing: 3px;
   text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 10px;
+  opacity: 0.5;
 }
+.player-label { left: 16px;  color: #60a5fa; }
+.enemy-label  { right: 16px; color: #f87171; }
 
-.player-team {
-  border-left: 4px solid #3b82f6;
-  padding-left: 15px;
-}
-
-.enemy-team {
-  border-right: 4px solid #ef4444;
-  padding-right: 15px;
-  align-items: flex-end;
-}
-
-.formation {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.unit-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
+/* ── Unit circles ──────────────────────────────────────── */
 .unit-circle {
   position: relative;
   width: 70px;
@@ -76,193 +62,190 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: bold;
-  text-align: center;
-  border: 2px solid #475569;
-  flex-shrink: 0;
+  border: 2px solid #334155;
+  transition: opacity 0.25s ease, box-shadow 0.25s ease;
   overflow: visible;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: default;
 }
 
 .unit-circle.player {
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-  color: #eff6ff;
-  border-color: #60a5fa;
+  background: radial-gradient(circle at 40% 35%, #2563eb, #1e3a8a);
+  color: #dbeafe;
+  border-color: #3b82f6;
 }
 
 .unit-circle.enemy {
-  background: linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%);
-  color: #fef2f2;
-  border-color: #f87171;
+  background: radial-gradient(circle at 40% 35%, #dc2626, #7f1d1d);
+  color: #fee2e2;
+  border-color: #ef4444;
 }
 
 .unit-circle.dead {
+  opacity: 0.2 !important;
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: none !important;
+}
+
+/* Active actor: glow and full brightness */
+.unit-circle.active {
+  box-shadow: 0 0 0 3px #facc15, 0 0 24px rgba(250, 204, 21, 0.5);
+  border-color: #facc15;
+  opacity: 1 !important;
+}
+
+/* Other units dim while someone else acts */
+.unit-circle.dimmed {
   opacity: 0.3;
-  background: #334155;
 }
 
 .unit-name {
-  padding: 4px 6px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-size: 10px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.2;
+  padding: 0 4px;
+  pointer-events: none;
 }
 
+/* ── Status overlay rings ──────────────────────────────── */
+/* MARK — gold pulse ring outside the circle */
 .unit-circle.has-mark .status-mark {
   position: absolute;
-  inset: -4px;
-  border: 3px solid #fbbf24;
+  inset: -5px;
+  border: 2.5px solid #fbbf24;
   border-radius: 50%;
-  animation: pulse-mark 1s ease-in-out infinite;
+  animation: pulse-mark 1.1s ease-in-out infinite;
   pointer-events: none;
 }
 
+/* SHOCK — blue dashed ring */
 .unit-circle.has-shock .status-shock {
   position: absolute;
-  inset: -2px;
+  inset: -3px;
   border: 2px dashed #60a5fa;
   border-radius: 50%;
-  animation: pulse-shock 0.6s ease-in-out infinite;
+  animation: spin-shock 4s linear infinite;
   pointer-events: none;
 }
 
-.unit-circle.has-burn .status-burn {
-  position: absolute;
-  inset: -6px;
-  box-shadow: 0 0 16px rgba(239, 68, 68, 0.9), inset 0 0 10px rgba(239, 68, 68, 0.5);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
+/* SHIELD — yellow solid ring */
 .unit-circle.has-shield .status-shield {
   position: absolute;
-  inset: -2px;
-  border: 3px solid #eab308;
+  inset: -4px;
+  border: 2.5px solid #eab308;
   border-radius: 50%;
-  background: rgba(234, 179, 8, 0.15);
+  background: rgba(234, 179, 8, 0.08);
   pointer-events: none;
 }
 
 @keyframes pulse-mark {
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.1); opacity: 1; }
+  0%, 100% { transform: scale(1);    opacity: 0.8; }
+  50%       { transform: scale(1.12); opacity: 1;   }
+}
+@keyframes spin-shock {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
 }
 
-@keyframes pulse-shock {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
-}
-
-.hp-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-}
-
+/* ── HP bar ────────────────────────────────────────────── */
 .hp-bar {
-  flex: 1;
-  height: 8px;
-  background: #1e293b;
-  border-radius: 4px;
+  width: 70px;
+  height: 6px;
+  margin-top: 5px;
+  background: #0f172a;
+  border-radius: 3px;
   overflow: hidden;
-  border: 1px solid #475569;
-  min-width: 100px;
+  border: 1px solid #334155;
 }
-
 .hp-fill {
   height: 100%;
-  background: linear-gradient(90deg, #dc2626 0%, #fbbf24 50%, #22c55e 100%);
-  width: 100%;
-  transition: width 0.2s ease-out;
+  background: linear-gradient(90deg, #dc2626 0%, #f59e0b 55%, #22c55e 100%);
+  transition: width 0.22s ease-out;
 }
-
 .hp-text {
-  font-size: 10px;
-  color: #cbd5e1;
-  min-width: 45px;
-  text-align: right;
-  font-weight: 600;
+  font-size: 9px;
+  color: #64748b;
+  text-align: center;
+  margin-top: 2px;
+  white-space: nowrap;
 }
 
+/* ── Damage floats ─────────────────────────────────────── */
+.damage-float {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fca5a5;
+  font-size: 13px;
+  font-weight: bold;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: float-up 0.85s ease-out forwards;
+  z-index: 20;
+}
+@keyframes float-up {
+  0%   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+  100% { transform: translateX(-50%) translateY(-36px); opacity: 0; }
+}
+
+/* ── Event log ─────────────────────────────────────────── */
 .log-section {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid #334155;
-  border-radius: 6px;
-  padding: 12px;
-  min-height: 40px;
-  margin-bottom: 20px;
-  max-height: 120px;
-  overflow-y: auto;
+  background: rgba(10, 16, 32, 0.7);
+  border: 1px solid #1e293b;
+  border-radius: 5px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
 }
-
 .log-entry {
   font-size: 12px;
-  color: #cbd5e1;
-  line-height: 1.5;
-  font-family: 'Monaco', 'Courier New', monospace;
+  color: #94a3b8;
+  letter-spacing: 0.3px;
 }
 
+/* ── Playback controls ─────────────────────────────────── */
 .controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
-  padding: 15px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid #334155;
-  border-radius: 6px;
 }
-
 button {
-  padding: 8px 16px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 4px;
+  padding: 7px 14px;
+  background: #1e3a5f;
+  color: #93c5fd;
+  border: 1px solid #2563eb;
+  border-radius: 5px;
   cursor: pointer;
   font-size: 12px;
   font-weight: bold;
-  transition: all 0.2s;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
 }
-
-button:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-}
-
-button:active {
-  transform: translateY(0);
-}
-
-.speed-control {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.speed-control label {
-  font-size: 12px;
+button:hover    { background: #1d4ed8; color: #eff6ff; }
+button.btn-active { background: #065f46; border-color: #10b981; color: #6ee7b7; }
+select {
+  padding: 6px 10px;
+  background: #0f172a;
   color: #94a3b8;
-}
-
-.speed-control select {
-  padding: 4px 8px;
-  background: #1e293b;
-  color: #e2e8f0;
-  border: 1px solid #475569;
-  border-radius: 4px;
+  border: 1px solid #334155;
+  border-radius: 5px;
   font-size: 12px;
+  font-family: inherit;
   cursor: pointer;
 }
-
 .progress-text {
-  font-size: 12px;
-  color: #94a3b8;
   margin-left: auto;
+  font-size: 11px;
+  color: #475569;
 }
 
 .battle-loading {
   text-align: center;
-  padding: 40px;
-  color: #94a3b8;
+  padding: 60px;
+  color: #475569;
 }
