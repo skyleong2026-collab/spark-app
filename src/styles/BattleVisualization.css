@@ -70,8 +70,8 @@
 
 .unit-circle {
   position: relative;
-  width: 60px;
-  height: 60px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -81,7 +81,8 @@
   text-align: center;
   border: 2px solid #475569;
   flex-shrink: 0;
-  overflow: hidden;
+  overflow: visible;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .unit-circle.player {
@@ -106,35 +107,39 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.unit-circle .status-mark {
+.unit-circle.has-mark .status-mark {
   position: absolute;
-  inset: -2px;
+  inset: -4px;
   border: 3px solid #fbbf24;
   border-radius: 50%;
   animation: pulse-mark 1s ease-in-out infinite;
+  pointer-events: none;
 }
 
-.unit-circle .status-shock {
+.unit-circle.has-shock .status-shock {
   position: absolute;
-  inset: 0;
+  inset: -2px;
   border: 2px dashed #60a5fa;
   border-radius: 50%;
   animation: pulse-shock 0.6s ease-in-out infinite;
+  pointer-events: none;
 }
 
-.unit-circle .status-burn {
+.unit-circle.has-burn .status-burn {
   position: absolute;
-  inset: -4px;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.8), inset 0 0 8px rgba(239, 68, 68, 0.4);
+  inset: -6px;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.9), inset 0 0 10px rgba(239, 68, 68, 0.5);
   border-radius: 50%;
+  pointer-events: none;
 }
 
-.unit-circle .status-shield {
+.unit-circle.has-shield .status-shield {
   position: absolute;
-  inset: 0;
+  inset: -2px;
   border: 3px solid #eab308;
   border-radius: 50%;
-  background: rgba(234, 179, 8, 0.1);
+  background: rgba(234, 179, 8, 0.15);
+  pointer-events: none;
 }
 
 @keyframes pulse-mark {
@@ -145,6 +150,13 @@
 @keyframes pulse-shock {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
+}
+
+.hp-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
 }
 
 .hp-bar {
@@ -169,6 +181,7 @@
   color: #cbd5e1;
   min-width: 45px;
   text-align: right;
+  font-weight: 600;
 }
 
 .log-section {

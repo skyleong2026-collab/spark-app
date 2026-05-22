@@ -21,7 +21,15 @@ export default function BattleVisualization() {
 
     const initialStates = {};
     finalUnits.forEach(u => {
-      initialStates[u.id] = { hp: u.maxHp, mark: false, shock: 0, burn: 0, shield: 0, stunned: 0 };
+      initialStates[u.id] = {
+        hp: u.maxHp,
+        maxHp: u.maxHp,
+        mark: false,
+        shock: 0,
+        burn: 0,
+        shield: u.archtype === 'thornwall' ? 30 : 0,
+        stunned: 0
+      };
     });
     setUnitStates(initialStates);
     setEventIndex(0);
@@ -99,24 +107,33 @@ export default function BattleVisualization() {
   ];
 
   const renderUnit = (unit, isPlayer) => {
-    const state = unitStates[unit.id] || { hp: unit.maxHp, mark: false, shock: 0, burn: 0, shield: 0 };
-    const hpPercent = Math.max(0, (state.hp / 60) * 100);
+    const state = unitStates[unit.id] || { hp: 60, maxHp: 60, mark: false, shock: 0, burn: 0, shield: 0 };
+    const maxHp = state.maxHp || 60;
+    const hpPercent = Math.max(0, (state.hp / maxHp) * 100);
     const isDead = state.hp === 0;
+
+    const statusClasses = [];
+    if (state.mark) statusClasses.push('has-mark');
+    if (state.shock > 0) statusClasses.push('has-shock');
+    if (state.burn > 0) statusClasses.push('has-burn');
+    if (state.shield > 0) statusClasses.push('has-shield');
 
     return (
       <div key={unit.id} className="unit-card">
-        <div className={`unit-circle ${isPlayer ? 'player' : 'enemy'} ${isDead ? 'dead' : ''}`}>
+        <div className={`unit-circle ${isPlayer ? 'player' : 'enemy'} ${isDead ? 'dead' : ''} ${statusClasses.join(' ')}`}>
           {state.mark && <div className="status-mark"></div>}
           {state.shock > 0 && <div className="status-shock"></div>}
           {state.burn > 0 && <div className="status-burn"></div>}
           {state.shield > 0 && <div className="status-shield"></div>}
           <div className="unit-name">{unit.name}</div>
         </div>
-        <div className="hp-bar">
-          <div className="hp-fill" style={{ width: `${hpPercent}%` }}></div>
-        </div>
-        <div className="hp-text">
-          {Math.max(0, Math.floor(state.hp))}/{60}
+        <div className="hp-container">
+          <div className="hp-bar">
+            <div className="hp-fill" style={{ width: `${hpPercent}%` }}></div>
+          </div>
+          <div className="hp-text">
+            {Math.max(0, Math.floor(state.hp))}/{maxHp}
+          </div>
         </div>
       </div>
     );
@@ -144,7 +161,14 @@ export default function BattleVisualization() {
 
       <div className="log-section">
         <div className="log-entry">
-          {currentEvent ? `${currentEvent.actorName || ''} ${currentEvent.type} ${currentEvent.effect || ''}` : 'Battle starting...'}
+          {currentEvent ?
+            currentEvent.type === 'skill' ? `🎯 ${currentEvent.actorName} used ${currentEvent.skill} → ${currentEvent.effect}` :
+            currentEvent.type === 'attack' ? `⚔ ${currentEvent.actorName} attacked ${currentEvent.targetName} (${currentEvent.dmg} dmg)` :
+            currentEvent.type === 'defeat' ? `💀 ${currentEvent.unitName} defeated` :
+            currentEvent.type === 'round_start' ? `📍 Turn ${currentEvent.round}` :
+            currentEvent.type === 'battle_end' ? `${currentEvent.winner === 'player' ? '✓ VICTORY' : '✗ DEFEAT'}` :
+            `${currentEvent.type}`
+          : 'Battle starting...'}
         </div>
       </div>
 
