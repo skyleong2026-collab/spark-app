@@ -1,0 +1,255 @@
+.battle-visualization {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.turn-indicator {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #60a5fa;
+  margin-bottom: 20px;
+  height: 24px;
+}
+
+.battle-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  border: 1px solid #334155;
+}
+
+.team {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.team-label {
+  font-size: 12px;
+  font-weight: bold;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+
+.player-team {
+  border-left: 4px solid #3b82f6;
+  padding-left: 15px;
+}
+
+.enemy-team {
+  border-right: 4px solid #ef4444;
+  padding-right: 15px;
+  align-items: flex-end;
+}
+
+.formation {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.unit-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.unit-circle {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+  border: 2px solid #475569;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.unit-circle.player {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  color: #eff6ff;
+  border-color: #60a5fa;
+}
+
+.unit-circle.enemy {
+  background: linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%);
+  color: #fef2f2;
+  border-color: #f87171;
+}
+
+.unit-circle.dead {
+  opacity: 0.3;
+  background: #334155;
+}
+
+.unit-name {
+  padding: 4px 6px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.unit-circle .status-mark {
+  position: absolute;
+  inset: -2px;
+  border: 3px solid #fbbf24;
+  border-radius: 50%;
+  animation: pulse-mark 1s ease-in-out infinite;
+}
+
+.unit-circle .status-shock {
+  position: absolute;
+  inset: 0;
+  border: 2px dashed #60a5fa;
+  border-radius: 50%;
+  animation: pulse-shock 0.6s ease-in-out infinite;
+}
+
+.unit-circle .status-burn {
+  position: absolute;
+  inset: -4px;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.8), inset 0 0 8px rgba(239, 68, 68, 0.4);
+  border-radius: 50%;
+}
+
+.unit-circle .status-shield {
+  position: absolute;
+  inset: 0;
+  border: 3px solid #eab308;
+  border-radius: 50%;
+  background: rgba(234, 179, 8, 0.1);
+}
+
+@keyframes pulse-mark {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+@keyframes pulse-shock {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.hp-bar {
+  flex: 1;
+  height: 8px;
+  background: #1e293b;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #475569;
+  min-width: 100px;
+}
+
+.hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #dc2626 0%, #fbbf24 50%, #22c55e 100%);
+  width: 100%;
+  transition: width 0.2s ease-out;
+}
+
+.hp-text {
+  font-size: 10px;
+  color: #cbd5e1;
+  min-width: 45px;
+  text-align: right;
+}
+
+.log-section {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 12px;
+  min-height: 40px;
+  margin-bottom: 20px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.log-entry {
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 15px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  border-radius: 6px;
+}
+
+button {
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+button:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.speed-control label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.speed-control select {
+  padding: 4px 8px;
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+.battle-loading {
+  text-align: center;
+  padding: 40px;
+  color: #94a3b8;
+}
