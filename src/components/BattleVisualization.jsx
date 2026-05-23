@@ -5,7 +5,6 @@ import '../styles/BattleVisualization.css';
 const PLAYER_TEAM = ['nyx', 'thornwall', 'vex'];
 const ENEMY_TEAM  = [null, null, null];
 
-// Fixed coordinate system — units are nodes on a field, not list items
 const ARENA_W = 720;
 const ARENA_H = 300;
 const UNIT_POS = {
@@ -18,14 +17,14 @@ const UNIT_POS = {
 };
 
 const PLAYER_UNITS = [
-  { id: 'player_0', name: 'Nyx',      maxHp:  60 },
+  { id: 'player_0', name: 'Nyx',       maxHp:  60 },
   { id: 'player_1', name: 'Thornwall', maxHp: 180 },
   { id: 'player_2', name: 'Vex',       maxHp:  75 },
 ];
 const ENEMY_UNITS = [
-  { id: 'enemy_0', name: 'Goblin', maxHp: 60 },
-  { id: 'enemy_1', name: 'Goblin', maxHp: 60 },
-  { id: 'enemy_2', name: 'Goblin', maxHp: 60 },
+  { id: 'enemy_0', name: 'Goblin A', maxHp: 120 },
+  { id: 'enemy_1', name: 'Goblin B', maxHp: 120 },
+  { id: 'enemy_2', name: 'Goblin C', maxHp: 120 },
 ];
 
 function initStates(finalUnits) {
@@ -40,6 +39,31 @@ function initStates(finalUnits) {
   return s;
 }
 
+// ── Log panel styles ─────────────────────────────────────────
+const LOG_BTN = {
+  background: '#0f172a', color: '#94a3b8',
+  border: '1px solid #334155', padding: '4px 14px',
+  borderRadius: '4px', cursor: 'pointer', fontSize: '12px',
+};
+const LOG_PANEL = {
+  background: '#020617', color: '#94a3b8',
+  fontFamily: 'monospace', fontSize: '11px', lineHeight: '1.6',
+  padding: '16px', margin: '0 16px 16px',
+  maxHeight: '420px', overflowY: 'auto',
+  border: '1px solid #1e293b', borderRadius: '4px',
+  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+};
+
+// Test suite compositions (5 battles covering different interaction sets)
+const TEST_TEAMS = [
+  ['nyx', 'thornwall', 'vex'],   // SHOCK chain + relay + MARK
+  ['vex', 'thornwall', 'kael'],  // relay + BURN terrain
+  ['solin', 'nyx', 'thornwall'], // Pulse Engine + MARK (no Vex chain)
+  ['vex', 'kael', 'nyx'],        // SHOCK + BURN + MARK (no relay)
+  ['nyx', 'thornwall', 'vex'],   // repeat — show variance
+];
+const AGENT_DISPLAY = { nyx:'Nyx', thornwall:'Thornwall', vex:'Vex', solin:'Solin', kael:'Kael' };
+
 export default function BattleVisualization() {
   const [battleData,    setBattleData]    = useState(null);
   const [eventIndex,    setEventIndex]    = useState(0);
@@ -51,10 +75,16 @@ export default function BattleVisualization() {
   const [battleCount,   setBattleCount]   = useState(1);
   const [autoReplay,    setAutoReplay]    = useState(false);
 
+  // §20 event digest state
+  const [currentDigest, setCurrentDigest] = useState('Battle not yet run.');
+  const [testSuiteLog,  setTestSuiteLog]  = useState('');
+  const [showBattleLog, setShowBattleLog] = useState(false);
+  const [showTestSuite, setShowTestSuite]  = useState(false);
+
   // Relationship visualization state
-  const [telegraph,     setTelegraph]     = useState(null); // {from,to,kind}
+  const [telegraph,     setTelegraph]     = useState(null);
   const [activeActor,   setActiveActor]   = useState(null);
-  const [damageFloats,  setDamageFloats]  = useState([]);   // [{id,unitId,dmg}]
+  const [damageFloats,  setDamageFloats]  = useState([]);
   const floatId = useRef(0);
 
   const addFloat = useCallback((unitId, dmg) => {
@@ -64,9 +94,10 @@ export default function BattleVisualization() {
   }, []);
 
   const startBattle = useCallback(() => {
-    const { events, finalUnits } = simulateBattle(PLAYER_TEAM, ENEMY_TEAM);
+    const { events, finalUnits, digest } = simulateBattle(PLAYER_TEAM, ENEMY_TEAM);
     setBattleData({ events });
     setUnitStates(initStates(finalUnits));
+    setCurrentDigest(digest.join('\n'));
     setEventIndex(0);
     setTelegraph(null);
     setActiveActor(null);
@@ -77,7 +108,25 @@ export default function BattleVisualization() {
 
   useEffect(() => { startBattle(); }, [startBattle]);
 
-  // Playback loop
+  // ── Test suite runner ──────────────────────────────────────
+  function runTestSuite() {
+    const sep = '▓'.repeat(52);
+    const out = TEST_TEAMS.map((team, i) => {
+      const { digest } = simulateBattle(team, [null, null, null]);
+      return [
+        '',
+        sep,
+        `BATTLE ${i + 1}/5   Team: [${team.map(k => AGENT_DISPLAY[k] || k).join(', ')}]`,
+        sep,
+        ...digest,
+      ].join('\n');
+    });
+    setTestSuiteLog(out.join('\n'));
+    setShowTestSuite(true);
+    setShowBattleLog(false);
+  }
+
+  // ── Playback loop ──────────────────────────────────────────
   useEffect(() => {
     if (!isPlaying || !battleData) return;
     const delay = Math.max(60, 300 / speed);
@@ -168,7 +217,7 @@ export default function BattleVisualization() {
     return () => clearTimeout(timer);
   }, [isPlaying, eventIndex, battleData, speed, autoReplay, battleCount, addFloat, startBattle]);
 
-  // ── SVG relationship layer ──────────────────────────────
+  // ── SVG relationship layer ─────────────────────────────────
   const getPos = (id) => UNIT_POS[id] || { x: 0, y: 0 };
 
   const svgTelegraph = () => {
@@ -181,16 +230,13 @@ export default function BattleVisualization() {
                   telegraph.kind === 'burn'   ? '#f97316' : '#c084fc';
     return (
       <g>
-        {/* Shadow line for depth */}
         <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
           stroke="rgba(0,0,0,0.5)" strokeWidth="5" />
-        {/* Main telegraph line */}
         <line x1={a.x} y1={a.y} x2={b.x} y2={b.y}
           stroke={color} strokeWidth="2" strokeDasharray="8,4" opacity="0.9">
           <animate attributeName="stroke-dashoffset" from="0" to="-24"
             dur="0.3s" repeatCount="indefinite" />
         </line>
-        {/* Arrowhead at target */}
         <circle cx={b.x} cy={b.y} r="5" fill={color} opacity="0.8" />
       </g>
     );
@@ -238,7 +284,7 @@ export default function BattleVisualization() {
       });
   };
 
-  // ── Unit rendering ──────────────────────────────────────
+  // ── Unit rendering ─────────────────────────────────────────
   const renderUnit = (unit, isPlayer) => {
     const s = unitStates[unit.id] || { hp: unit.maxHp, maxHp: unit.maxHp, mark: false, shock: 0, burn: 0, shield: 0 };
     const hp  = s.hp ?? unit.maxHp;
@@ -290,24 +336,18 @@ export default function BattleVisualization() {
       <div className="turn-indicator">{turnText || '8gents — Combat Diagnostic'}</div>
 
       <div className="battle-arena">
-        {/* Relationship SVG — drawn under units so lines connect circles */}
         <svg className="rel-svg" viewBox={`0 0 ${ARENA_W} ${ARENA_H}`}
           preserveAspectRatio="none" width={ARENA_W} height={ARENA_H}>
-          {/* Mid-field divider */}
           <line x1={ARENA_W/2} y1={20} x2={ARENA_W/2} y2={ARENA_H-20}
             stroke="#1e293b" strokeWidth="1.5" />
-
-          {/* State layers: burn zones first (background), then shock arcs, then telegraph on top */}
           {svgBurnZones()}
           {svgShockArcs()}
           {svgTelegraph()}
         </svg>
 
-        {/* Team labels */}
         <div className="team-label player-label">PLAYER</div>
         <div className="team-label enemy-label">ENEMY</div>
 
-        {/* Units rendered absolutely over SVG */}
         {PLAYER_UNITS.map(u => renderUnit(u, true))}
         {ENEMY_UNITS.map(u => renderUnit(u, false))}
       </div>
@@ -338,6 +378,33 @@ export default function BattleVisualization() {
           Battle {battleCount}/20 · {eventIndex}/{battleData.events.length}
         </span>
       </div>
+
+      {/* ── §20 Event Digest Controls ─────────────────────── */}
+      <div style={{ display:'flex', gap:'8px', padding:'4px 16px 8px', flexWrap:'wrap' }}>
+        <button style={LOG_BTN} onClick={() => setShowBattleLog(v => !v)}>
+          {showBattleLog ? '▲ Hide Event Log' : '▼ Show Event Log (current battle)'}
+        </button>
+        <button style={{ ...LOG_BTN, background:'#1e3a5f', borderColor:'#2563eb' }}
+          onClick={runTestSuite}>
+          ▶▶ Simulate 5 Test Battles
+        </button>
+        {showTestSuite && (
+          <button style={{ ...LOG_BTN, background:'#1f1f23' }}
+            onClick={() => setShowTestSuite(false)}>
+            ✕ Hide Test Suite
+          </button>
+        )}
+      </div>
+
+      {showBattleLog && (
+        <pre style={LOG_PANEL}>{currentDigest}</pre>
+      )}
+
+      {showTestSuite && (
+        <pre style={{ ...LOG_PANEL, maxHeight:'640px', borderColor:'#1e40af' }}>
+          {testSuiteLog || 'Running…'}
+        </pre>
+      )}
     </div>
   );
 }
