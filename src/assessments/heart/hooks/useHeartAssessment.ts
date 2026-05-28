@@ -27,6 +27,7 @@ export type HeartAssessmentState =
   | 'items'
   | 'scoring'
   | 'confirmation'
+  | 'two-candidate'
   | 'result'
   | 'error';
 
@@ -37,6 +38,7 @@ export interface UseHeartAssessmentReturn {
   responseCount: number;
   confirmationPairData: ConfirmationPairEntry | null;
   algorithmPrimaryType: EnneagramType | null;
+  scoringResult: HeartScoringResult | null;
   finalResult: HeartScoringResult | null;
   error: string | null;
   beginAssessment: () => void;
@@ -152,6 +154,10 @@ export function useHeartAssessment(): UseHeartAssessmentReturn {
 
         if (result.confirmation_triggered) {
           setState('confirmation');
+        } else if (result.two_candidate) {
+          // Two-candidate display: show both types, skip synthesis
+          setFinalResult(result);
+          setState('two-candidate');
         } else {
           // No confirmation → final result is the algorithm result
           setFinalResult(result);
@@ -203,6 +209,7 @@ export function useHeartAssessment(): UseHeartAssessmentReturn {
     responseCount,
     confirmationPairData,
     algorithmPrimaryType: scoringResult?.primary_type ?? null,
+    scoringResult,
     finalResult,
     error,
     beginAssessment,

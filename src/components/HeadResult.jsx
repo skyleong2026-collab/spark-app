@@ -1,8 +1,14 @@
 import { HEAD_DESCRIPTIONS } from '../lib/typeDescriptions'
 
+function deriveOrientation(stack) {
+  if (!stack || stack.length < 2) return null
+  return stack.charAt(1).toLowerCase() === 'i' ? 'Introverted' : 'Extraverted'
+}
+
 export default function HeadResult({ resultType, stack, confidence, softSecondary, onContinue }) {
   const description = HEAD_DESCRIPTIONS[resultType] ?? ''
   const conf = confidence?.toLowerCase()
+  const orientation = deriveOrientation(stack)
 
   return (
     <div style={wrap} className="head-result">
@@ -10,9 +16,15 @@ export default function HeadResult({ resultType, stack, confidence, softSecondar
         <h2 style={stackNotation}>{stack}</h2>
         <p style={typeName}>{resultType}</p>
         <p style={descriptionText}>{description}</p>
-        <p style={confidenceLabel}>
-          Confidence: {conf ? conf.charAt(0).toUpperCase() + conf.slice(1) : confidence}
-        </p>
+
+        <div style={metaRow}>
+          {orientation && (
+            <span style={metaChip}>{orientation}</span>
+          )}
+          <span style={metaChip}>
+            {conf ? conf.charAt(0).toUpperCase() + conf.slice(1) : confidence} confidence
+          </span>
+        </div>
 
         {(conf === 'moderate' || conf === 'low') && softSecondary && (
           <p style={secondaryText}>Possible alternative: {softSecondary}</p>
@@ -26,7 +38,7 @@ export default function HeadResult({ resultType, stack, confidence, softSecondar
         )}
 
         <button style={continueBtn} onClick={onContinue}>
-          Continue to Hand →
+          Continue to Work Energy Assessment →
         </button>
       </div>
     </div>
@@ -38,7 +50,8 @@ const card = { background: '#fff', borderRadius: 12, border: '0.5px solid rgba(0
 const stackNotation = { fontSize: 36, fontWeight: 700, color: '#185fa5', marginBottom: '0.25rem' }
 const typeName = { fontSize: 18, fontWeight: 600, color: '#1a1a18', marginBottom: '1rem', marginTop: 0 }
 const descriptionText = { fontSize: 15, color: '#3a3a38', lineHeight: 1.8, marginBottom: '1.25rem' }
-const confidenceLabel = { fontSize: 13, color: '#5f5e5a', marginBottom: '0.75rem' }
+const metaRow = { display: 'flex', gap: 8, justifyContent: 'center', marginBottom: '0.75rem', flexWrap: 'wrap' }
+const metaChip = { fontSize: 12, fontWeight: 500, color: '#5f5e5a', background: 'rgba(0,0,0,0.05)', borderRadius: 20, padding: '3px 12px' }
 const secondaryText = { fontSize: 13, color: '#5f5e5a', marginBottom: '0.75rem' }
 const noteText = { fontSize: 13, color: '#888780', lineHeight: 1.7, padding: '1rem', background: 'rgba(0,0,0,0.03)', borderRadius: 8, marginBottom: '1.5rem', textAlign: 'left' }
 const continueBtn = { marginTop: '1.5rem', width: '100%', padding: '0.875rem 1.5rem', background: '#185fa5', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }

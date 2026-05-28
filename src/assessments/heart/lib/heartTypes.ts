@@ -22,6 +22,11 @@ export type EnneagramType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 export type ConfidenceLevel = 'high' | 'moderate' | 'low';
 export type ConfirmationResult = 'agreed' | 'disagreed' | 'uncertain';
 export type ResponsePatternFlag = 'normal' | 'flat';
+export type StageSplitType = 'clean' | '2-2-0' | '2-1-1';
+export type SynthesisVariant = 'synthesis_high' | 'synthesis_moderate' | 'synthesis_low';
+
+// Only the 4 active confirmation pairs (same-stance, thin-center-margin trigger)
+export type ConfusablePair = '1|6' | '3|7' | '4|5' | '4|9';
 
 export interface HeartScoringResult {
   assessment_version: string;
@@ -39,11 +44,18 @@ export interface HeartScoringResult {
   stance_confidence: ConfidenceLevel;
   center_confidence: ConfidenceLevel;
   overall_confidence: ConfidenceLevel;
+  // Ambiguity scoring (Spec 1)
+  stage1_split_type: StageSplitType;
+  stage1_split_stances: Stance[] | null; // which stances were in the split (null if clean)
+  two_candidate: boolean;
+  synthesis_variant: SynthesisVariant | null;
+  // Confirmation pair (Spec 2)
   confirmation_triggered: boolean;
   confirmation_pair: string | null;
   confirmation_reason: string | null;
   confirmation_result: ConfirmationResult | null;
   confirmation_user_pick: EnneagramType | null;
+  // Final resolved values
   final_type: EnneagramType;
   final_secondary: EnneagramType;
   final_confidence: ConfidenceLevel;
@@ -59,14 +71,20 @@ export interface HeartItem {
   subCategory: string;
 }
 
-export type ConfusablePair = '1|6' | '2|9' | '3|7' | '4|5' | '4|9' | '5|6' | '1|8' | '2|3' | '2|6' | '3|8' | '5|9' | '7|9';
+// Scenario-based forced-choice confirmation pair (v2 format)
+export interface ConfirmationPairEntry {
+  stem: string;
+  optionA: { text: string; type: EnneagramType };
+  optionB: { text: string; type: EnneagramType };
+  resultCopy: {
+    shared: string;    // "Both Type X and Type Y share [stance] orientation — [what they share]"
+    forA: string;      // "What distinguished the read was [discriminating mechanism for A]"
+    forB: string;      // "What distinguished the read was [discriminating mechanism for B]"
+  };
+}
 
+// Forced-choice only — no 'uncertain' for Heart (spec: invisible branching, must pick)
 export type ConfirmationOutcome =
   | { result: 'agreed' }
   | { result: 'disagreed'; userPick: EnneagramType }
-  | { result: 'uncertain' };
-
-export interface ConfirmationPairEntry {
-  patternA: { type: EnneagramType; description: string };
-  patternB: { type: EnneagramType; description: string };
-}
+  | { result: 'uncertain' }; // retained for Head; Heart UI does not offer this

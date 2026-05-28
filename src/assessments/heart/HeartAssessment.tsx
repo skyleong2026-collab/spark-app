@@ -21,6 +21,7 @@ export default function HeartAssessment() {
     currentItemIndex,
     confirmationPairData,
     algorithmPrimaryType,
+    scoringResult,
     finalResult,
     error,
     beginAssessment,
@@ -85,6 +86,27 @@ export default function HeartAssessment() {
     );
   }
 
+  if (state === 'two-candidate' && scoringResult) {
+    const typeA = scoringResult.primary_type;
+    const typeB = scoringResult.secondary_type;
+    return (
+      <div style={page}>
+        <div style={statusCard}>
+          <p style={twoCandidateHeading}>Your responses point to two possible types.</p>
+          <p style={twoCandidateBody}>
+            Based on your answers, Type {typeA} and Type {typeB} are both consistent reads.
+            The assessment isn't able to distinguish them from this data alone.
+            Your coach or facilitator can help clarify which fits better.
+          </p>
+          <div style={twoCandidateBadges}>
+            <span style={typeBadge}>{typeA}</span>
+            <span style={typeBadge}>{typeB}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (state === 'error') {
     return (
       <div style={page}>
@@ -121,6 +143,10 @@ export default function HeartAssessment() {
 const page: CSSProperties = { minHeight: '100vh', background: '#f5f5f3', padding: '2rem 1rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'center' };
 const cardWrap: CSSProperties = { maxWidth: 560, width: '100%', background: '#fff', borderRadius: 12, border: '0.5px solid rgba(0,0,0,0.1)', padding: '1.5rem 1rem 2rem' };
 const statusCard: CSSProperties = { maxWidth: 560, width: '100%', background: '#fff', borderRadius: 12, border: '0.5px solid rgba(0,0,0,0.1)', padding: '2.5rem 2rem', marginTop: '2rem' };
+const twoCandidateHeading: CSSProperties = { fontSize: 18, fontWeight: 600, color: '#1a1a18', textAlign: 'center', marginBottom: '1rem' };
+const twoCandidateBody: CSSProperties = { fontSize: 14, color: '#5f5e5a', lineHeight: 1.7, textAlign: 'center', marginBottom: '1.5rem' };
+const twoCandidateBadges: CSSProperties = { display: 'flex', justifyContent: 'center', gap: 16 };
+const typeBadge: CSSProperties = { fontSize: 22, fontWeight: 700, color: '#1a1a18', background: 'rgba(0,0,0,0.05)', borderRadius: 8, padding: '0.5rem 1.25rem' };
 const debugPanel: CSSProperties = { marginTop: '1rem', background: '#1a1a18', borderRadius: 12, padding: '1.25rem', overflow: 'auto' };
 const debugHeader: CSSProperties = { fontSize: 12, fontWeight: 600, color: '#888780', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' };
 const debugPre: CSSProperties = { fontSize: 12, color: '#e0ddd5', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' };

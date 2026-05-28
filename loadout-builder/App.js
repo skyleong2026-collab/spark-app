@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, Modal,
+  View, Text, ScrollView, TouchableOpacity, Modal, Dimensions,
   StyleSheet, SafeAreaView, StatusBar, Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -140,9 +140,84 @@ const C = {
   warn:      '#f6ad55',
 };
 
+// ── Map logic ─────────────────────────────────────────────────────────────────
+
+const MAP_G = 8;
+const SCREEN_W = Dimensions.get('window').width;
+const TILE_SIZE = Math.floor((SCREEN_W - 32 - (MAP_G - 1) * 2) / MAP_G);
+
+function initMapGrid() {
+  const g = Array.from({ length: MAP_G }, () => Array(MAP_G).fill(0));
+  g[3][3] = 1;
+  return g;
+}
+
+function spreadOneTile(grid) {
+  const candidates = [];
+  for (let r = 0; r < MAP_G; r++) {
+    for (let c = 0; c < MAP_G; c++) {
+      if (grid[r][c] !== 0) continue;
+      const adj = [[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
+      if (adj.some(([nr, nc]) => nr >= 0 && nr < MAP_G && nc >= 0 && nc < MAP_G && grid[nr][nc] > 0))
+        candidates.push([r, c]);
+    }
+  }
+  if (!candidates.length) return grid;
+  const [tr, tc] = candidates[Math.floor(Math.random() * candidates.length)];
+  const maxD = Math.max(...grid.flat().filter(v => v > 0));
+  const next = grid.map(row => [...row]);
+  next[tr][tc] = maxD + 1;
+  return next;
+}
+
+function shrinkCluster(grid, count) {
+  let next = grid.map(row => [...row]);
+  for (let i = 0; i < count; i++) {
+    const boundary = [];
+    for (let r = 0; r < MAP_G; r++) {
+      for (let c = 0; c < MAP_G; c++) {
+        if (next[r][c] === 0) continue;
+        const adj = [[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
+        if (adj.some(([nr, nc]) => nr >= 0 && nr < MAP_G && nc >= 0 && nc < MAP_G && next[nr][nc] === 0))
+          boundary.push([r, c]);
+      }
+    }
+    if (!boundary.length) break;
+    const [br, bc] = boundary[Math.floor(Math.random() * boundary.length)];
+    next[br][bc] = 0;
+  }
+  return next;
+}
+
+function growCluster(grid, count) {
+  let next = grid.map(row => [...row]);
+  for (let i = 0; i < count; i++) {
+    const candidates = [];
+    for (let r = 0; r < MAP_G; r++) {
+      for (let c = 0; c < MAP_G; c++) {
+        if (next[r][c] !== 0) continue;
+        const adj = [[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
+        if (adj.some(([nr, nc]) => nr >= 0 && nr < MAP_G && nc >= 0 && nc < MAP_G && next[nr][nc] > 0))
+          candidates.push([r, c]);
+      }
+    }
+    if (!candidates.length) break;
+    const [tr, tc] = candidates[Math.floor(Math.random() * candidates.length)];
+    const maxD = Math.max(...next.flat().filter(v => v > 0), 0);
+    next[tr][tc] = maxD + 1;
+  }
+  return next;
+}
+
+function mapThreat(spreadCount) {
+  if (spreadCount <= 8)  return { level: 'LOW',      mult: 1.0, color: '#48bb78' };
+  if (spreadCount <= 20) return { level: 'MODERATE', mult: 1.3, color: '#f6ad55' };
+  return                        { level: 'CRITICAL', mult: 1.6, color: '#e53e3e' };
+}
+
 // ── Combat simulation ─────────────────────────────────────────────────────────
 
-function simulateCombat(loadedSlots) {
+function simulateCombat(loadedSlots, diffMult = 1.0) {
   const alive     = (arr) => arr.filter(u => u.hp > 0);
   const lowestHp  = (arr) => { const a = alive(arr); return a.length ? a.reduce((m, u) => u.hp < m.hp ? u : m) : null; };
   const highestHp = (arr) => { const a = alive(arr); return a.length ? a.reduce((m, u) => u.hp > m.hp ? u : m) : null; };
@@ -176,10 +251,12 @@ function simulateCombat(loadedSlots) {
     };
   });
 
+  const gHp  = Math.round(60 * diffMult);
+  const gAtk = Math.round(12 * diffMult);
   const goblins = [
-    { id: 10, name: 'Goblin A', pos: 0, hp: 60, maxHp: 60, atk: 12, shock: 0, burn: 0, burnTerrain: 0, isolated: false, stunned: 0 },
-    { id: 11, name: 'Goblin B', pos: 1, hp: 60, maxHp: 60, atk: 12, shock: 0, burn: 0, burnTerrain: 0, isolated: false, stunned: 0 },
-    { id: 12, name: 'Goblin C', pos: 2, hp: 60, maxHp: 60, atk: 12, shock: 0, burn: 0, burnTerrain: 0, isolated: false, stunned: 0 },
+    { id: 10, name: 'Goblin A', pos: 0, hp: gHp, maxHp: gHp, atk: gAtk, shock: 0, burn: 0, burnTerrain: 0, isolated: false, stunned: 0 },
+    { id: 11, name: 'Goblin B', pos: 1, hp: gHp, maxHp: gHp, atk: gAtk, shock: 0, burn: 0, burnTerrain: 0, isolated: false, stunned: 0 },
+    { id: 12, name: 'Goblin C', pos: 2, hp: gHp, maxHp: gHp, atk: gAtk, shock: 0, burn: 0, burnTerrain: 0, isolated: false, stunned: 0 },
   ];
 
   // BURN terrain zones: array of { pos, duration }
@@ -704,9 +781,258 @@ function simulateCombat(loadedSlots) {
   return { log, won: alive(goblins).length === 0 };
 }
 
+// ── Battle Visualization Screen ──────────────────────────────────────────────
+
+function BattleVisualizationScreen({ slots }) {
+  const [battleState, setBattleState] = useState(null);
+  const [eventIndex, setEventIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1);
+  const [autoReplay, setAutoReplay] = useState(false);
+  const [replayCount, setReplayCount] = useState(0);
+  const mountedRef = useRef(true);
+  const animationRef = useRef(null);
+
+  useEffect(() => {
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  // Generate battle events
+  const generateBattle = useCallback(() => {
+    const filled = slots.filter(Boolean);
+    if (filled.length < 3) return null;
+    const { log, won } = simulateCombat(filled);
+    return { events: log, won, filled };
+  }, [slots]);
+
+  // Initialize first battle
+  useEffect(() => {
+    const battle = generateBattle();
+    if (battle) setBattleState(battle);
+  }, [generateBattle]);
+
+  // Playback loop
+  useEffect(() => {
+    if (!isPlaying || !battleState) return;
+
+    const delay = Math.max(200, Math.floor(350 / speed));
+    animationRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
+      if (eventIndex < battleState.events.length) {
+        setEventIndex(prev => prev + 1);
+      } else {
+        setIsPlaying(false);
+        if (autoReplay && replayCount < 19) {
+          setTimeout(() => {
+            if (mountedRef.current) {
+              const newBattle = generateBattle();
+              if (newBattle) {
+                setBattleState(newBattle);
+                setEventIndex(0);
+                setIsPlaying(true);
+                setReplayCount(prev => prev + 1);
+              }
+            }
+          }, 1500);
+        } else if (autoReplay && replayCount >= 19) {
+          setAutoReplay(false);
+          setReplayCount(0);
+        }
+      }
+    }, delay);
+
+    return () => clearTimeout(animationRef.current);
+  }, [isPlaying, eventIndex, battleState, speed, autoReplay, replayCount, generateBattle]);
+
+  const reset = () => {
+    setIsPlaying(false);
+    setEventIndex(0);
+    setAutoReplay(false);
+    setReplayCount(0);
+  };
+
+  const startAutoReplay = () => {
+    setEventIndex(0);
+    setReplayCount(0);
+    setAutoReplay(true);
+    setIsPlaying(true);
+  };
+
+  const filled = slots.filter(Boolean);
+  const canRun = filled.length === 3 && battleState;
+  const currentEvent = battleState?.events[eventIndex] || '';
+
+  // Render unit circle with status
+  const renderUnit = (name, maxHp, hp, statuses, isEnemy, key) => {
+    const hpPercent = Math.max(0, Math.min(100, (hp / maxHp) * 100));
+    const hasMark = statuses.includes('MARK');
+    const hasShock = statuses.includes('SHOCK');
+    const hasBurn = statuses.includes('BURN');
+    const hasShield = statuses.includes('SHIELD');
+
+    return (
+      <View key={key} style={bv.unitWrapper}>
+        <View
+          style={[
+            bv.unitCircle,
+            isEnemy && bv.unitEnemy,
+            hasShield && bv.unitShield,
+            hasShock && bv.unitShock,
+            hasBurn && bv.unitBurn,
+            hasMark && bv.unitMark,
+          ]}
+        >
+          <Text style={bv.unitName}>{name}</Text>
+        </View>
+        <View style={bv.hpBarBg}>
+          <View style={[bv.hpBar, { width: (hpPercent / 100) * 70 }]} />
+        </View>
+      </View>
+    );
+  };
+
+  if (!battleState) {
+    return (
+      <View style={bv.container}>
+        <Text style={bv.title}>Battle Visualization</Text>
+        <Text style={bv.subtitle}>Fill all 3 loadout slots to view battles</Text>
+      </View>
+    );
+  }
+
+  // Mock unit data (in real scenario, extract from battle state)
+  const playerTeam = [
+    { name: 'Nyx', maxHp: 65, hp: 50, statuses: eventIndex % 3 === 0 ? ['MARK'] : [] },
+    { name: 'Vex', maxHp: 75, hp: 60, statuses: eventIndex % 4 === 0 ? ['SHOCK'] : [] },
+    { name: 'Solin', maxHp: 90, hp: 70, statuses: [] },
+  ];
+
+  const enemyTeam = [
+    { name: 'Goblin A', maxHp: 60, hp: 45, statuses: eventIndex % 5 === 0 ? ['BURN'] : [] },
+    { name: 'Goblin B', maxHp: 60, hp: 40, statuses: [] },
+    { name: 'Goblin C', maxHp: 60, hp: 35, statuses: eventIndex % 2 === 0 ? ['SHIELD'] : [] },
+  ];
+
+  return (
+    <ScrollView style={bv.container} contentContainerStyle={bv.scroll} showsVerticalScrollIndicator={false}>
+      <View style={bv.header}>
+        <Text style={bv.title}>Battle {replayCount + 1}</Text>
+        <Text style={bv.subtitle}>Playback controls: Play/Pause/Restart</Text>
+      </View>
+
+      {/* Formation */}
+      <View style={bv.formationRow}>
+        <View style={bv.teamCol}>
+          <Text style={bv.teamLabel}>YOUR TEAM</Text>
+          {playerTeam.map((u, i) => renderUnit(u.name, u.maxHp, u.hp, u.statuses, false, i))}
+        </View>
+        <View style={bv.vsCol}>
+          <Text style={bv.vsText}>VS</Text>
+        </View>
+        <View style={bv.teamCol}>
+          <Text style={[bv.teamLabel, { textAlign: 'right' }]}>ENEMIES</Text>
+          {enemyTeam.map((u, i) => renderUnit(u.name, u.maxHp, u.hp, u.statuses, true, i))}
+        </View>
+      </View>
+
+      {/* Event log */}
+      {currentEvent && (
+        <View style={bv.logBox}>
+          <Text style={bv.logLabel}>Event {eventIndex + 1} / {battleState.events.length}</Text>
+          <Text style={bv.logText}>{currentEvent}</Text>
+        </View>
+      )}
+
+      {/* Controls */}
+      <View style={bv.controls}>
+        <TouchableOpacity style={bv.btn} onPress={() => setIsPlaying(!isPlaying)} activeOpacity={0.7}>
+          <Text style={bv.btnText}>{isPlaying ? '⏸ Pause' : '▶ Play'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={bv.btn} onPress={reset} activeOpacity={0.7}>
+          <Text style={bv.btnText}>↻ Restart</Text>
+        </TouchableOpacity>
+        <View style={bv.speedPicker}>
+          {[0.5, 1, 2].map(s => (
+            <TouchableOpacity
+              key={s}
+              style={[bv.speedBtn, speed === s && bv.speedBtnActive]}
+              onPress={() => setSpeed(s)}
+              activeOpacity={0.7}
+            >
+              <Text style={[bv.speedText, speed === s && bv.speedTextActive]}>{s}x</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Auto-replay */}
+      <TouchableOpacity
+        style={[bv.autoReplayBtn, autoReplay && bv.autoReplayBtnActive]}
+        onPress={startAutoReplay}
+        disabled={autoReplay}
+        activeOpacity={0.75}
+      >
+        <Text style={bv.autoReplayText}>{autoReplay ? `Running… ${replayCount + 1}/20` : '▶ Auto-Replay 20x'}</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+}
+
+// ── Map Screen ────────────────────────────────────────────────────────────────
+
+function MapScreen({ mapGrid, onTileTap, spreadPaused }) {
+  const spreadCount = mapGrid.flat().filter(v => v > 0).length;
+  const threat = mapThreat(spreadCount);
+
+  const tileColor = (depth) => {
+    if (depth === 0) return '#0d1117';
+    if (depth <= 3)  return '#1a3a1a';
+    if (depth <= 7)  return '#5a2800';
+    return                   '#8b1010';
+  };
+
+  return (
+    <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 12 }}>
+      <View style={m.statsRow}>
+        <View style={m.statCard}>
+          <Text style={m.statLabel}>SPREAD</Text>
+          <Text style={m.statValue}>{spreadCount} tiles</Text>
+        </View>
+        <View style={m.statCard}>
+          <Text style={m.statLabel}>THREAT</Text>
+          <Text style={[m.statValue, { color: threat.color }]}>{threat.level}</Text>
+        </View>
+        <View style={m.statCard}>
+          <Text style={m.statLabel}>STATUS</Text>
+          <Text style={[m.statValue, { color: spreadPaused ? C.warn : C.muted, fontSize: 12 }]}>
+            {spreadPaused ? '⏸ PAUSED' : '◉ LIVE'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={m.grid}>
+        {mapGrid.map((row, r) => (
+          <View key={r} style={m.row}>
+            {row.map((depth, c) => (
+              <TouchableOpacity
+                key={c}
+                style={[m.tile, { backgroundColor: tileColor(depth) }]}
+                onPress={depth > 0 ? () => onTileTap(r, c) : undefined}
+                activeOpacity={depth > 0 ? 0.6 : 1}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
+
+      <Text style={m.hint}>Tap any infected tile to intervene.</Text>
+    </View>
+  );
+}
+
 // ── Dungeon Run Screen ────────────────────────────────────────────────────────
 
-function DungeonRunScreen({ slots }) {
+function DungeonRunScreen({ slots, difficultyMultiplier = 1.0, onMapReturn }) {
   const [combatLog, setCombatLog] = useState([]);
   const [result, setResult]       = useState(null); // 'win' | 'defeat' | null
   const [running, setRunning]     = useState(false);
@@ -729,7 +1055,7 @@ function DungeonRunScreen({ slots }) {
     setCombatLog([]);
     setResult(null);
 
-    const { log, won } = simulateCombat(filled);
+    const { log, won } = simulateCombat(filled, difficultyMultiplier);
 
     for (const line of log) {
       if (!mountedRef.current) return;
@@ -868,6 +1194,15 @@ function DungeonRunScreen({ slots }) {
               {result === 'win' ? 'All goblins eliminated.' : 'Your team was wiped out.'}
             </Text>
           </View>
+          {onMapReturn && (
+            <TouchableOpacity
+              style={[d.runAgainBtn, { borderColor: C.accent, marginBottom: 8 }]}
+              onPress={() => onMapReturn(result === 'win')}
+              activeOpacity={0.75}
+            >
+              <Text style={[d.runAgainText, { color: C.accent }]}>← Return to Map</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={d.runAgainBtn} onPress={reset} activeOpacity={0.75}>
             <Text style={d.runAgainText}>Run Again</Text>
           </TouchableOpacity>
@@ -880,14 +1215,27 @@ function DungeonRunScreen({ slots }) {
 // ── Root App ──────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [screen, setScreen]                       = useState('loadout');
+  const [screen, setScreen]                       = useState('map');
   const [slots, setSlots]                         = useState([null, null, null]);
   const [agentPickerSlot, setAgentPickerSlot]     = useState(null);
   const [behaviorPickerSlot, setBehaviorPickerSlot] = useState(null);
   // skillPickerSlot: { slotIdx, skillIdx } — which loadout slot + which equip slot (0 or 1)
   const [skillPickerTarget, setSkillPickerTarget] = useState(null);
 
+  // ── Map state ───────────────────────────────────────────────────────────────
+  const [mapGrid, setMapGrid]                 = useState(() => initMapGrid());
+  const [mapSpreadPaused, setMapSpreadPaused] = useState(false);
+  const [mapBriefTile, setMapBriefTile]       = useState(null);
+  const [mapDiffMult, setMapDiffMult]         = useState(1.0);
+  const [mapDungeonActive, setMapDungeonActive] = useState(false);
+
   useEffect(() => { loadConfig(); }, []);
+
+  useEffect(() => {
+    if (mapSpreadPaused) return;
+    const id = setInterval(() => setMapGrid(prev => spreadOneTile(prev)), 3000);
+    return () => clearInterval(id);
+  }, [mapSpreadPaused]);
 
   const loadConfig = async () => {
     try {
@@ -946,6 +1294,29 @@ export default function App() {
     setSlots(next); persist(next);
   };
 
+  // ── Map handlers ─────────────────────────────────────────────────────────────
+  const handleMapTileTap = (row, col) => {
+    const count = mapGrid.flat().filter(v => v > 0).length;
+    setMapDiffMult(mapThreat(count).mult);
+    setMapBriefTile({ row, col });
+    setMapSpreadPaused(true);
+  };
+
+  const handleMapReturn = (won) => {
+    setMapGrid(prev => won ? shrinkCluster(prev, 2) : growCluster(prev, 2));
+    setMapDungeonActive(false);
+    setMapSpreadPaused(false);
+    setScreen('map');
+  };
+
+  const navigateToTab = (tab) => {
+    if (screen === 'dungeon' && mapDungeonActive && tab !== 'dungeon') {
+      setMapDungeonActive(false);
+      setMapSpreadPaused(false);
+    }
+    setScreen(tab);
+  };
+
   const configured = slots.filter(Boolean);
 
   return (
@@ -954,19 +1325,28 @@ export default function App() {
 
       {/* ── Tab bar ── */}
       <View style={s.tabBar}>
-        {['loadout', 'dungeon'].map(tab => (
+        {['map', 'loadout', 'dungeon', 'battle'].map(tab => (
           <TouchableOpacity
             key={tab}
             style={[s.tab, screen === tab && s.tabActive]}
-            onPress={() => setScreen(tab)}
+            onPress={() => navigateToTab(tab)}
             activeOpacity={0.8}
           >
             <Text style={[s.tabText, screen === tab && s.tabTextActive]}>
-              {tab === 'loadout' ? 'Loadout' : 'Dungeon Run'}
+              {tab === 'map' ? 'Map' : tab === 'loadout' ? 'Loadout' : tab === 'dungeon' ? 'Dungeon' : 'Battle'}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* ── Map ── */}
+      {screen === 'map' && (
+        <MapScreen
+          mapGrid={mapGrid}
+          onTileTap={handleMapTileTap}
+          spreadPaused={mapSpreadPaused}
+        />
+      )}
 
       {/* ── Loadout Builder ── */}
       {screen === 'loadout' && (
@@ -1105,7 +1485,90 @@ export default function App() {
       )}
 
       {/* ── Dungeon Run ── */}
-      {screen === 'dungeon' && <DungeonRunScreen slots={slots} />}
+      {screen === 'dungeon' && (
+        <DungeonRunScreen
+          slots={slots}
+          difficultyMultiplier={mapDungeonActive ? mapDiffMult : 1.0}
+          onMapReturn={mapDungeonActive ? handleMapReturn : undefined}
+        />
+      )}
+
+      {/* ── Battle Visualization ── */}
+      {screen === 'battle' && <BattleVisualizationScreen slots={slots} />}
+
+      {/* ── Intervention Brief ── */}
+      <Modal visible={mapBriefTile !== null} transparent animationType="slide">
+        <View style={s.overlay}>
+          <View style={s.sheet}>
+            {(() => {
+              const count = mapGrid.flat().filter(v => v > 0).length;
+              const threat = mapThreat(count);
+              const diffLabel = threat.mult <= 1.0 ? 'Easy' : threat.mult <= 1.3 ? 'Moderate' : 'Hard';
+              return (
+                <>
+                  <Text style={s.sheetTitle}>Intervention Brief</Text>
+                  <Text style={s.sheetSub}>Threat type: Exponential Spread</Text>
+
+                  <View style={m.briefGrid}>
+                    <View style={m.briefStat}>
+                      <Text style={m.briefStatLabel}>SPREAD SIZE</Text>
+                      <Text style={m.briefStatValue}>{count} tiles</Text>
+                    </View>
+                    <View style={m.briefStat}>
+                      <Text style={m.briefStatLabel}>THREAT LEVEL</Text>
+                      <Text style={[m.briefStatValue, { color: threat.color }]}>{threat.level}</Text>
+                    </View>
+                    <View style={m.briefStat}>
+                      <Text style={m.briefStatLabel}>DIFFICULTY</Text>
+                      <Text style={[m.briefStatValue, { color: threat.color }]}>{diffLabel}</Text>
+                    </View>
+                    <View style={m.briefStat}>
+                      <Text style={m.briefStatLabel}>ENEMY SCALE</Text>
+                      <Text style={[m.briefStatValue, { color: threat.color }]}>{threat.mult}×</Text>
+                    </View>
+                  </View>
+
+                  <View style={{ gap: 8, marginTop: 4 }}>
+                    <TouchableOpacity
+                      style={[s.sheetItem, { backgroundColor: C.accentDim, justifyContent: 'center' }]}
+                      onPress={() => {
+                        setMapBriefTile(null);
+                        setMapSpreadPaused(false);
+                        setScreen('loadout');
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[s.sheetItemName, { color: C.accent, textAlign: 'center' }]}>Configure Loadout</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[s.sheetItem, { backgroundColor: '#0a1f12', justifyContent: 'center', borderWidth: 1, borderColor: C.success }]}
+                      onPress={() => {
+                        setMapBriefTile(null);
+                        setMapDungeonActive(true);
+                        setScreen('dungeon');
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[s.sheetItemName, { color: C.success, textAlign: 'center' }]}>⚔ Battle Now</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={s.cancelBtn}
+                      onPress={() => {
+                        setMapBriefTile(null);
+                        setMapSpreadPaused(false);
+                      }}
+                    >
+                      <Text style={s.cancelText}>Dismiss</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Agent Picker Modal ── */}
       <Modal visible={agentPickerSlot !== null} transparent animationType="slide">
@@ -1471,4 +1934,122 @@ const d = StyleSheet.create({
   // Run Again
   runAgainBtn:  { borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.border, marginBottom: 20 },
   runAgainText: { color: C.muted, fontSize: 15, fontWeight: '600' },
+});
+
+// ── Styles: Battle Visualization ─────────────────────────────────────────────
+
+const bv = StyleSheet.create({
+  container: { flex: 1, backgroundColor: C.bg },
+  scroll: { padding: 16, paddingBottom: 48 },
+
+  header: { marginBottom: 20, marginTop: 8 },
+  title: { fontSize: 30, fontWeight: '800', color: C.text, letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, color: C.muted, marginTop: 4 },
+
+  // Formation
+  formationRow: { flexDirection: 'row', gap: 12, marginBottom: 24, alignItems: 'flex-start' },
+  teamCol: { flex: 1 },
+  vsCol: { width: 40, alignItems: 'center', justifyContent: 'center', paddingTop: 12 },
+  vsText: { color: C.muted, fontWeight: '800', fontSize: 14 },
+  teamLabel: { fontSize: 10, fontWeight: '700', color: C.muted, letterSpacing: 1, marginBottom: 12 },
+
+  // Unit circles
+  unitWrapper: { marginBottom: 14, alignItems: 'center' },
+  unitCircle: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: C.card,
+    borderWidth: 2,
+    borderColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  unitEnemy: { borderColor: '#6b1414' },
+  unitMark: { borderColor: '#fbbf24', borderWidth: 3 },
+  unitShock: { borderColor: '#818cf8', borderWidth: 2, borderStyle: 'dashed' },
+  unitBurn: { backgroundColor: '#2a1414', borderColor: '#dc2626' },
+  unitShield: { borderColor: '#eab308', backgroundColor: '#1f2414' },
+  unitName: { fontSize: 11, fontWeight: '700', color: C.text, textAlign: 'center' },
+
+  // HP bar
+  hpBarBg: { width: 70, height: 5, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden' },
+  hpBar: { height: 5, backgroundColor: C.success, borderRadius: 3 },
+
+  // Event log
+  logBox: { backgroundColor: C.surface, borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: C.border },
+  logLabel: { fontSize: 10, fontWeight: '700', color: C.muted, letterSpacing: 1.5, marginBottom: 8 },
+  logText: { fontSize: 13, color: C.accent, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', lineHeight: 18 },
+
+  // Controls
+  controls: { flexDirection: 'row', gap: 8, marginBottom: 16, alignItems: 'center' },
+  btn: { flex: 1, backgroundColor: C.accent, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  btnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+
+  speedPicker: { flexDirection: 'row', gap: 6, backgroundColor: C.surface, borderRadius: 10, padding: 6, borderWidth: 1, borderColor: C.border },
+  speedBtn: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 6 },
+  speedBtnActive: { backgroundColor: C.accent },
+  speedText: { color: C.muted, fontSize: 12, fontWeight: '600' },
+  speedTextActive: { color: '#fff' },
+
+  // Auto-replay
+  autoReplayBtn: { borderRadius: 12, paddingVertical: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.border, marginBottom: 20 },
+  autoReplayBtnActive: { backgroundColor: C.accentDim },
+  autoReplayText: { color: C.muted, fontSize: 15, fontWeight: '600' },
+});
+
+// ── Styles: Map ───────────────────────────────────────────────────────────────
+
+const m = StyleSheet.create({
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: C.surface,
+    borderRadius: 10,
+    padding: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  statLabel: { fontSize: 9, fontWeight: '700', color: C.muted, letterSpacing: 1, textTransform: 'uppercase' },
+  statValue: { fontSize: 16, fontWeight: '700', color: C.text, marginTop: 3 },
+  statStatus: { fontSize: 12, fontWeight: '700', color: C.muted, marginTop: 3 },
+  statStatusPaused: { color: C.warn },
+
+  grid: { gap: 2 },
+  row:  { flexDirection: 'row', gap: 2, marginBottom: 0 },
+  tile: {
+    width: TILE_SIZE,
+    height: TILE_SIZE,
+    borderRadius: 3,
+  },
+
+  hint: {
+    marginTop: 12,
+    fontSize: 11,
+    color: C.muted,
+    textAlign: 'center',
+  },
+
+  // Intervention Brief grid
+  briefGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  briefStat: {
+    width: '47%',
+    backgroundColor: C.card,
+    borderRadius: 10,
+    padding: 12,
+  },
+  briefStatLabel: { fontSize: 9, fontWeight: '700', color: C.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 },
+  briefStatValue: { fontSize: 20, fontWeight: '800', color: C.text },
 });

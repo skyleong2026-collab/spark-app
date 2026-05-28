@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>8gents</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:      #0d0f14;
+  --surface: #161b26;
+  --card:    #1c2333;
+  --accent:  #4f8ef7;
+  --acdim:   #1e3460;
+  --text:    #e2e8f0;
+  --muted:   #64748b;
+  --border:  #2d3748;
+  --danger:  #e53e3e;
+  --success: #48bb78;
+  --warn:    #f6ad55;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── TAB BAR ── */
+.tab-bar {
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-shrink: 0;
+}
+.tab-btn {
+  flex: 1;
+  padding: 13px 4px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── SCREENS ── */
+.screen { flex: 1; display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.screen.hidden { display: none !important; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.75);
+  z-index: 100;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.modal-overlay.hidden { display: none !important; }
+.modal-sheet {
+  background: var(--surface);
+  border-top-left-radius: 24px; border-top-right-radius: 24px;
+  padding: 24px 24px 44px;
+  border-top: 1px solid var(--border);
+  width: 100%; max-width: 480px;
+  max-height: 85vh; overflow-y: auto;
+}
+.modal-title { font-size: 20px; font-weight: 800; color: var(--text); }
+.modal-sub   { font-size: 14px; color: var(--muted); margin: 4px 0 16px; }
+.modal-item {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 8px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.modal-item.dim { opacity: .38; pointer-events: none; }
+.modal-item.col { flex-direction: column; align-items: flex-start; gap: 4px; }
+.modal-item-name { font-size: 16px; font-weight: 600; }
+.modal-item-sub  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.modal-item-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.modal-check  { color: var(--accent); font-size: 18px; font-weight: 700; }
+.cancel-btn {
+  width: 100%; margin-top: 8px;
+  padding: 14px; border-radius: 12px;
+  border: 1px solid var(--border); background: none;
+  color: var(--muted); font-size: 16px; font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.cat-badge { background: var(--acdim); border-radius: 6px; padding: 3px 6px; font-size: 9px; font-weight: 800; color: var(--accent); letter-spacing: .5px; }
+.cd-text { font-size: 11px; color: var(--muted); font-weight: 600; }
+
+/* ── MAP ── */
+.map-stats { display: flex; gap: 8px; padding: 12px 16px 8px; }
+.stat-card {
+  flex: 1; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px; text-align: center;
+}
+.stat-label { font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.stat-value { font-size: 16px; font-weight: 700; color: var(--text); margin-top: 3px; }
+
+.map-grid-wrap { padding: 0 16px; }
+.map-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+.map-tile { aspect-ratio: 1; border-radius: 3px; background: #1a2030; transition: background .35s; }
+.map-tile.d1 { background: #1a3a1a; }
+.map-tile.d2 { background: #2a5020; }
+.map-tile.d3 { background: #5a3a00; }
+.map-tile.d4 { background: #7a2500; }
+.map-tile.d5 { background: #8b1010; }
+.map-tile.tap { cursor: pointer; }
+.map-tile.tap:active { opacity: .6; transform: scale(.9); }
+.map-hint { font-size: 11px; color: var(--muted); text-align: center; padding: 12px 16px; }
+
+/* Brief extras */
+.brief-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 4px 0 16px; }
+.brief-stat { background: var(--card); border-radius: 10px; padding: 12px; }
+.brief-stat-label { font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.brief-stat-value { font-size: 20px; font-weight: 800; }
+.brief-btn {
+  width: 100%; padding: 14px; border-radius: 12px;
+  border: none; font-size: 15px; font-weight: 700;
+  cursor: pointer; margin-bottom: 8px; -webkit-tap-highlight-color: transparent;
+}
+.brief-btn.configure { background: var(--acdim); color: var(--accent); }
+.brief-btn.battle    { background: #0a1f12; color: var(--success); border: 1px solid var(--success); }
+
+/* ── LOADOUT ── */
+.loadout-wrap { padding: 16px; padding-bottom: 48px; }
+.section-header { margin: 8px 0 20px; }
+.section-title { font-size: 28px; font-weight: 800; letter-spacing: -.5px; }
+.section-sub   { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+.slot-card {
+  background: var(--surface); border-radius: 16px;
+  margin-bottom: 12px; border: 1px solid var(--border); overflow: hidden;
+}
+.slot-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 14px 8px;
+}
+.slot-badge {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--acdim); color: var(--accent);
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.slot-label  { flex: 1; font-size: 13px; color: var(--muted); font-weight: 600; letter-spacing: .5px; }
+.slot-remove { font-size: 13px; color: var(--danger); font-weight: 600; cursor: pointer; }
+.slot-body   { padding: 0 14px 14px; }
+
+.select-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border-radius: 10px;
+  padding: 12px 14px; margin-bottom: 8px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.select-row:active { opacity: .75; }
+.row-cap { font-size: 10px; color: var(--muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.row-val { font-size: 18px; font-weight: 700; margin-top: 2px; }
+.row-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.chevron { color: var(--accent); font-size: 16px; }
+
+.add-btn {
+  display: block; width: calc(100% - 28px); margin: 8px 14px 14px;
+  padding: 16px; border: 1.5px dashed var(--acdim); border-radius: 10px;
+  background: none; color: var(--accent); font-size: 15px; font-weight: 600;
+  cursor: pointer; text-align: center; -webkit-tap-highlight-color: transparent;
+}
+
+.sig-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--card); border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 8px;
+}
+.sig-badge   { background: #1a2a4a; border-radius: 6px; padding: 3px 6px; font-size: 9px; font-weight: 800; color: var(--accent); letter-spacing: 1px; flex-shrink: 0; }
+.sig-name    { font-size: 13px; font-weight: 700; }
+.sig-effect  { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.status-tag  { background: #1e2d1e; border-radius: 6px; padding: 3px 6px; font-size: 9px; font-weight: 800; color: var(--success); letter-spacing: 1px; flex-shrink: 0; margin-left: auto; }
+
+.skill-row-wrap { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.skill-slot {
+  flex: 1; background: var(--card); border: 1.5px dashed var(--acdim);
+  border-radius: 10px; padding: 10px 12px;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.skill-slot.filled { border-style: solid; border-color: var(--border); }
+.skill-slot-empty  { font-size: 12px; font-weight: 600; color: var(--accent); }
+.skill-slot-cat    { font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.skill-slot-name   { font-size: 13px; font-weight: 700; }
+.skill-slot-effect { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.skill-clear { padding: 6px 8px; color: var(--muted); font-size: 14px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+.row-cap-standalone { font-size: 10px; color: var(--muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin: 10px 0 4px; }
+
+.summary-card {
+  background: var(--surface); border-radius: 16px;
+  padding: 18px; margin-top: 8px; border: 1px solid var(--border);
+}
+.summary-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+.summary-empty { font-size: 14px; color: var(--muted); text-align: center; line-height: 1.6; padding: 12px 0; }
+.summary-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.summary-row:last-child { border: none; }
+.summary-left { display: flex; align-items: center; gap: 10px; }
+.summary-num  { color: var(--accent); font-size: 13px; font-weight: 700; width: 22px; }
+.summary-name { font-size: 16px; font-weight: 700; }
+.summary-role { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.behavior-tag { background: var(--acdim); color: var(--accent); font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 8px; max-width: 150px; text-align: right; }
+
+/* ── DUNGEON ── */
+.dungeon-wrap { padding: 16px; padding-bottom: 48px; }
+.teams-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.team-col  { flex: 1; }
+.vs-col    { width: 36px; display: flex; align-items: center; justify-content: center; }
+.vs-text   { font-size: 14px; font-weight: 800; color: var(--muted); }
+.team-label{ font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+
+.unit-card { background: var(--surface); border-radius: 10px; padding: 10px; border: 1px solid var(--border); margin-bottom: 6px; }
+.unit-card.enemy { border-color: #4a1a1a; }
+.unit-card.empty { opacity: .35; text-align: center; padding: 16px; }
+.unit-name  { font-size: 13px; font-weight: 700; }
+.unit-role  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.unit-stats { font-size: 11px; color: var(--accent); margin-top: 4px; }
+.unit-skill { font-size: 10px; color: var(--accent); margin-top: 2px; }
+
+.warn-box  { background: #1f1400; border: 1px solid #5a3800; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+.warn-text { color: var(--warn); font-size: 13px; text-align: center; line-height: 1.5; }
+
+.run-btn {
+  width: 100%; padding: 16px; border-radius: 12px; border: none;
+  background: var(--accent); color: #fff;
+  font-size: 17px; font-weight: 800; letter-spacing: .5px;
+  cursor: pointer; margin-bottom: 20px; -webkit-tap-highlight-color: transparent;
+}
+.run-btn:disabled { background: var(--acdim); opacity: .5; cursor: default; }
+
+.log-box   { background: var(--surface); border-radius: 12px; padding: 14px; border: 1px solid var(--border); margin-bottom: 16px; max-height: 320px; overflow-y: auto; }
+.log-title { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+.log-line  { font-size: 12px; font-family: 'Menlo', 'Consolas', monospace; line-height: 1.65; margin-bottom: 1px; color: var(--text); }
+.log-line.muted   { color: var(--muted); }
+.log-line.danger  { color: var(--danger); }
+.log-line.success { color: var(--success); }
+.log-line.warn    { color: var(--warn); }
+.log-line.burn    { color: #f97316; }
+.log-line.shock   { color: #818cf8; }
+.log-line.mark    { color: #e879f9; }
+.log-line.accent  { color: var(--accent); }
+.log-line.burst   { color: #fbbf24; }
+.log-line.chain-header {
+  color: #a371f7; font-weight: 800; font-size: 12px;
+  background: rgba(163,113,247,.12);
+  border: 1px solid rgba(163,113,247,.3);
+  border-radius: 4px; padding: 5px 8px; margin: 6px 0;
+  text-align: center; letter-spacing: .5px; font-family: monospace;
+}
+.log-line.chain-footer {
+  color: rgba(163,113,247,.4); font-size: 9px; letter-spacing: 2px;
+  text-align: center; margin: 2px 0;
+  border-top: 1px solid rgba(163,113,247,.2);
+  padding-top: 4px; font-family: monospace;
+}
+
+.result-banner { border-radius: 16px; padding: 28px; text-align: center; margin-bottom: 14px; border: 1px solid; }
+.result-banner.win  { background: #0a1f12; border-color: #276749; }
+.result-banner.lose { background: #1f0a0a; border-color: #c53030; }
+.result-text     { font-size: 28px; font-weight: 900; letter-spacing: 3px; }
+.result-text.win { color: var(--success); }
+.result-text.lose{ color: var(--danger); }
+.result-sub      { font-size: 14px; color: var(--muted); margin-top: 8px; }
+.result-mult     { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+.secondary-btn {
+  width: 100%; padding: 14px; border-radius: 12px;
+  border: 1.5px solid var(--border); background: none;
+  color: var(--muted); font-size: 15px; font-weight: 600;
+  cursor: pointer; margin-bottom: 8px; -webkit-tap-highlight-color: transparent;
+}
+.secondary-btn.accent { border-color: var(--accent); color: var(--accent); }
+
+/* ── BATTLE VIZ ── */
+.battle-wrap { padding: 16px; padding-bottom: 48px; }
+.formation-row { display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-start; }
+.bv-team-col   { flex: 1; }
+.bv-vs-col     { width: 40px; display: flex; align-items: center; justify-content: center; padding-top: 12px; }
+.bv-team-label { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+.unit-wrapper  { text-align: center; margin-bottom: 14px; }
+.unit-circle {
+  width: 70px; height: 70px; border-radius: 50%;
+  background: var(--card); border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 8px; font-size: 11px; font-weight: 700;
+  transition: border-color .3s, background .3s;
+}
+.unit-circle.enemy  { border-color: #6b1414; }
+.unit-circle.m-mark   { border: 3px solid #fbbf24; }
+.unit-circle.m-shock  { border: 2px dashed #818cf8; }
+.unit-circle.m-burn   { background: #2a1414; border-color: #dc2626; }
+.unit-circle.m-shield { border-color: #eab308; background: #1f2414; }
+.hp-bar-bg { width: 70px; height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin: 0 auto; }
+.hp-bar    { height: 5px; background: var(--success); border-radius: 3px; transition: width .4s; }
+
+.bv-log-box { background: var(--surface); border-radius: 12px; padding: 14px; margin-bottom: 20px; border: 1px solid var(--border); min-height: 64px; }
+.bv-log-label  { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+.bv-log-count  { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.bv-log-event  { font-size: 13px; color: var(--accent); font-family: monospace; line-height: 1.5; }
+.bv-controls   { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; }
+.bv-btn        { flex: 1; background: var(--accent); border: none; border-radius: 10px; padding: 12px; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.speed-group   { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 6px; border: 1px solid var(--border); }
+.speed-btn     { padding: 8px 10px; border-radius: 6px; border: none; background: none; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.speed-btn.active { background: var(--accent); color: #fff; }
+.bv-empty { text-align: center; padding: 48px 24px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.assessment-section { margin: 0 0 16px; border: 1px solid rgba(163,113,247,.25); border-radius: 10px; padding: 12px 14px; background: rgba(163,113,247,.06); }
+.assessment-header { font-size: 9px; font-weight: 700; color: rgba(163,113,247,.7); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+.assessment-kv { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.assessment-kv-label { font-size: 11px; color: var(--muted); }
+.assessment-kv-value { font-size: 12px; font-weight: 700; }
+.assessment-detail { font-size: 11px; margin-bottom: 4px; padding-left: 8px; border-left: 2px solid; }
+.assessment-detail.pos { color: var(--success); border-color: var(--success); }
+.assessment-detail.neg { color: var(--danger); border-color: var(--danger); }
+.assessment-detail.neu { color: var(--muted); border-color: var(--muted); }
+.assessment-prediction { margin-top: 8px; font-size: 12px; font-weight: 700; text-align: center; padding: 6px; border-radius: 6px; }
+.assessment-prediction.win  { color: var(--success); background: rgba(72,187,120,.12); }
+.assessment-prediction.loss { color: var(--danger);  background: rgba(229,62,62,.12); }
+.assessment-prediction.even { color: var(--warn);    background: rgba(246,173,85,.12); }
+</style>
+</head>
+<body>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showTab('map')">Map</button>
+  <button class="tab-btn" onclick="showTab('loadout')">Loadout</button>
+  <button class="tab-btn" onclick="showTab('dungeon')">Dungeon</button>
+  <button class="tab-btn" onclick="showTab('battle')">Battle</button>
+</div>
+
+<!-- MAP SCREEN -->
+<div id="screen-map" class="screen">
+  <div class="map-stats" id="map-stats"></div>
+  <div class="map-grid-wrap">
+    <div class="map-grid" id="map-grid"></div>
+  </div>
+  <p class="map-hint">Tap any infected tile to intervene.</p>
+</div>
+
+<!-- LOADOUT SCREEN -->
+<div id="screen-loadout" class="screen hidden">
+  <div class="loadout-wrap" id="loadout-wrap"></div>
+</div>
+
+<!-- DUNGEON SCREEN -->
+<div id="screen-dungeon" class="screen hidden">
+  <div class="dungeon-wrap" id="dungeon-wrap"></div>
+</div>
+
+<!-- BATTLE VIZ SCREEN -->
+<div id="screen-battle" class="screen hidden">
+  <div class="battle-wrap" id="battle-wrap"></div>
+</div>
+
+<!-- INTERVENTION BRIEF MODAL -->
+<div id="modal-brief" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <div class="modal-title">Intervention Brief</div>
+    <div class="modal-sub">Threat type: Exponential Spread</div>
+    <div class="brief-grid" id="brief-grid"></div>
+    <div class="assessment-section hidden" id="loadout-assessment"></div>
+    <button class="brief-btn configure" onclick="briefConfigureLoadout()">Configure Loadout</button>
+    <button class="brief-btn battle" onclick="briefBattleNow()">⚔ Battle Now</button>
+    <button class="cancel-btn" onclick="closeBrief()">Dismiss</button>
+  </div>
+</div>
+
+<!-- AGENT PICKER MODAL -->
+<div id="modal-agent" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <div class="modal-title">Select 8gent</div>
+    <div class="modal-sub" id="agent-picker-sub"></div>
+    <div id="agent-picker-list"></div>
+    <button class="cancel-btn" onclick="closeModal('modal-agent')">Cancel</button>
+  </div>
+</div>
+
+<!-- BEHAVIOR PICKER MODAL -->
+<div id="modal-behavior" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <div class="modal-title">Select Behavior</div>
+    <div class="modal-sub" id="behavior-picker-sub"></div>
+    <div id="behavior-picker-list"></div>
+    <button class="cancel-btn" onclick="closeModal('modal-behavior')">Cancel</button>
+  </div>
+</div>
+
+<!-- SKILL PICKER MODAL -->
+<div id="modal-skill" class="modal-overlay hidden">
+  <div class="modal-sheet">
+    <div class="modal-title">Equip Active Skill</div>
+    <div class="modal-sub" id="skill-picker-sub"></div>
+    <div id="skill-picker-list"></div>
+    <button class="cancel-btn" onclick="closeModal('modal-skill')">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════════════════════════════
+
+const AGENTS = [
+  { id: '1', name: 'Vex',       role: 'Striker'   },
+  { id: '2', name: 'Kael',      role: 'Warrior'   },
+  { id: '3', name: 'Solin',     role: 'Medic'     },
+  { id: '4', name: 'Thornwall', role: 'Tank'       },
+  { id: '5', name: 'Nyx',       role: 'Assassin'  },
+];
+
+const BEHAVIORS = ['Attack Weakest', 'Attack Strongest', 'Protect Allies', 'Execute Low HP', 'Support'];
+
+const ARCHETYPE_STATS = {
+  Nyx:       { hp: 65,  atk: 38, speed: 10, shieldMax: 0  },
+  Thornwall: { hp: 200, atk: 12, speed: 6,  shieldMax: 30 },
+  Vex:       { hp: 75,  atk: 28, speed: 9,  shieldMax: 0  },
+  Solin:     { hp: 90,  atk: 15, speed: 8,  shieldMax: 0  },
+  Kael:      { hp: 100, atk: 22, speed: 7,  shieldMax: 0  },
+};
+
+const SKILL_POOL = {
+  Nyx: {
+    signature: { id: 'nyx_sig', name: 'Shadow Strike', category: 'Signature', effect: 'On attack, applies MARK. Nyx deals +50% damage to MARK targets.', cooldown: 0, statusTag: 'MARK' },
+    unlockable: [
+      { id: 'nyx_1', name: 'Execution Dive',   category: 'Strike',   cooldown: 2, statusTag: 'MARK', effect: '2× damage to a MARK target. Clears MARK on hit.' },
+      { id: 'nyx_2', name: 'Phantom Step',      category: 'Mobility', cooldown: 3, statusTag: 'MARK', effect: 'Repositions to backline. Ignores Tank intercept.' },
+      { id: 'nyx_4', name: "Predator's Finish", category: 'Burst',    cooldown: 4, statusTag: 'MARK', effect: '3× damage to isolated MARK target below 40% HP.' },
+      { id: 'nyx_5', name: 'Stalk',             category: 'Strike',   cooldown: 2, statusTag: 'MARK', effect: 'Strikes and refreshes MARK. Second hit if already MARK\'d.' },
+      { id: 'nyx_6', name: "Stalker's Instinct",category: 'Passive',  cooldown: 0, statusTag: 'MARK', effect: 'When Nyx enters a hazard zone, treated as isolated this round.' },
+    ],
+  },
+  Thornwall: {
+    signature: { id: 'thorn_sig', name: 'Fortress Field', category: 'Signature', effect: 'Deploys SHIELD at round start (30 HP). SHIELD relays SHOCK chains (+1 bounce).', cooldown: 0, statusTag: 'SHIELD' },
+    unlockable: [
+      { id: 'thorn_1', name: 'Iron Taunt',        category: 'Control',  cooldown: 3, statusTag: 'SHIELD', effect: 'Forces all enemies to target Thornwall for 2 rounds.' },
+      { id: 'thorn_3', name: 'Fortified Position', category: 'Support', cooldown: 2, statusTag: 'SHIELD', effect: 'Intercepts first bypass attempt. Backline protected while SHIELD active.' },
+      { id: 'thorn_4', name: 'Counter Edge',       category: 'Burst',   cooldown: 2, statusTag: 'SHIELD', effect: 'After taking a hit, retaliates 150% ATK. Restores 10 SHIELD.' },
+      { id: 'thorn_5', name: 'Ground Slam',        category: 'Strike',  cooldown: 3, statusTag: 'SHIELD', effect: 'Heavy strike 200% ATK. Stuns target 1 round.' },
+      { id: 'thorn_6', name: 'Armor Resonance',    category: 'Passive', cooldown: 0, statusTag: 'SHIELD', effect: 'Each SHIELD absorption gives +4 ATK. Stacks up to 3×.' },
+    ],
+  },
+  Vex: {
+    signature: { id: 'vex_sig', name: 'Cascade Initiation', category: 'Signature', effect: 'Applies SHOCK on attack. SHOCK arcs to 1 adjacent enemy. Routes through SHIELD +1 bounce.', cooldown: 0, statusTag: 'SHOCK' },
+    unlockable: [
+      { id: 'vex_1', name: 'Chain Arc',          category: 'Strike',   cooldown: 2, statusTag: 'SHOCK', effect: 'SHOCK spreads to 2 un-SHOCKED adjacent targets.' },
+      { id: 'vex_2', name: 'Arc Discharge',       category: 'Strike',   cooldown: 2, statusTag: 'SHOCK', effect: '2× to SHOCKED targets. Extends SHOCK 1 round.' },
+      { id: 'vex_3', name: 'Overcharge',          category: 'Burst',    cooldown: 4, statusTag: 'SHOCK', effect: 'Detonates all SHOCK for burst. Requires 2+ SHOCKED targets.' },
+      { id: 'vex_4', name: 'Resonance Wave',      category: 'Control',  cooldown: 3, statusTag: 'SHOCK', effect: 'Each SHOCKED enemy transfers SHOCK to 1 adjacent un-SHOCKED target.' },
+      { id: 'vex_5', name: 'Static Accumulation', category: 'Passive',  cooldown: 0, statusTag: 'SHOCK', effect: 'Each SHOCK arc gives Vex +5 ATK until end of round.' },
+    ],
+  },
+  Solin: {
+    signature: { id: 'solin_sig', name: 'Pulse Engine', category: 'Signature', effect: 'At round start, reduces highest active cooldown on an ally by 1. That ally acts first.', cooldown: 0, statusTag: 'PULSE' },
+    unlockable: [
+      { id: 'solin_1', name: 'Resonance Relay', category: 'Support',  cooldown: 2, statusTag: 'PULSE', effect: 'Extends one active buff or effect on an ally by 1 round.' },
+      { id: 'solin_2', name: 'Flow Burst',       category: 'Support',  cooldown: 3, statusTag: 'PULSE', effect: 'Heals lowest-HP ally 30% max HP. Reduces their cooldown by 1.' },
+      { id: 'solin_3', name: 'Overclock',         category: 'Burst',    cooldown: 4, statusTag: 'PULSE', effect: 'Clears all cooldowns for one ally. Applies PULSE instability 1 round.' },
+      { id: 'solin_4', name: 'Tempo Shift',       category: 'Control',  cooldown: 3, statusTag: 'PULSE', effect: 'Slows 1 enemy (acts last). Advances 1 ally\'s next action.' },
+      { id: 'solin_6', name: 'Phase Efficiency',  category: 'Passive',  cooldown: 0, statusTag: 'PULSE', effect: 'When ally cooldown expires naturally, reduce another ally\'s by 1.' },
+    ],
+  },
+  Kael: {
+    signature: { id: 'kael_sig', name: 'Incendiary Grid', category: 'Signature', effect: 'On attack, deploys BURN zone on target position (3 rounds). Enemies in zone get BURN (6/round, 2 rounds).', cooldown: 0, statusTag: 'BURN' },
+    unlockable: [
+      { id: 'kael_1', name: 'Detonation Protocol', category: 'Burst',    cooldown: 3, statusTag: 'BURN', effect: 'Detonates all BURN targets for burst damage. Zones remain.' },
+      { id: 'kael_2', name: 'Suppression Grid',    category: 'Control',  cooldown: 3, statusTag: 'BURN', effect: 'Expands BURN zones to adjacent positions. Enemies act last.' },
+      { id: 'kael_4', name: 'Precision Strike',    category: 'Strike',   cooldown: 2, statusTag: 'BURN', effect: 'POWER strike. +8 bonus damage per BURN stack on target.' },
+      { id: 'kael_5', name: 'Drone Support',       category: 'Support',  cooldown: 3, statusTag: 'BURN', effect: 'Deploys Incendiary Drone. End of round: BURN all enemies at 1 position.' },
+      { id: 'kael_6', name: "Architect's Patience",category: 'Passive',  cooldown: 0, statusTag: 'BURN', effect: 'BURN zones resist first disruption each round. On expiry fires final ignition pulse.' },
+    ],
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════════════════════════════
+
+const MAP_G = 8;
+
+let slots            = [null, null, null];
+let currentTab       = 'map';
+
+// Map
+let mapGrid          = initMapGrid();
+let spreadPaused     = false;
+let spreadTimer      = null;
+let mapDiffMult      = 1.0;
+let mapDungeonActive = false;
+
+// Dungeon animation
+let dungeonLog       = [];
+let dungeonResult    = null;   // 'win' | 'lose' | null
+let dungeonRunning   = false;
+let dungeonAnimTimer = null;
+let dungeonLogIdx    = 0;
+
+// Battle viz
+let battleState      = null;
+let battleIdx        = 0;
+let battlePlaying    = false;
+let battleSpeed      = 1;
+let battleAnimTimer  = null;
+
+// Picker state
+let pickerSlot       = null;   // slot index being edited
+let pickerSkillSlot  = null;   // { slotIdx, skillIdx }
+
+// ══════════════════════════════════════════════════════════════════════
+//  MAP LOGIC
+// ══════════════════════════════════════════════════════════════════════
+
+function initMapGrid() {
+  const g = Array.from({ length: MAP_G }, () => Array(MAP_G).fill(0));
+  g[3][3] = 1;
+  return g;
+}
+
+function spreadOneTile(grid) {
+  const candidates = [];
+  for (let r = 0; r < MAP_G; r++) {
+    for (let c = 0; c < MAP_G; c++) {
+      if (grid[r][c] !== 0) continue;
+      const adj = [[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
+      if (adj.some(([nr,nc]) => nr>=0&&nr<MAP_G&&nc>=0&&nc<MAP_G&&grid[nr][nc]>0))
+        candidates.push([r,c]);
+    }
+  }
+  if (!candidates.length) return grid;
+  const [tr,tc] = candidates[Math.floor(Math.random()*candidates.length)];
+  const maxD = Math.max(...grid.flat().filter(v=>v>0));
+  const next = grid.map(row=>[...row]);
+  next[tr][tc] = maxD + 1;
+  return next;
+}
+
+function shrinkCluster(grid, count) {
+  let next = grid.map(row=>[...row]);
+  for (let i = 0; i < count; i++) {
+    const boundary = [];
+    for (let r = 0; r < MAP_G; r++) {
+      for (let c = 0; c < MAP_G; c++) {
+        if (!next[r][c]) continue;
+        const adj = [[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
+        if (adj.some(([nr,nc]) => !(nr>=0&&nr<MAP_G&&nc>=0&&nc<MAP_G) || !next[nr][nc]))
+          boundary.push([r,c]);
+      }
+    }
+    if (!boundary.length) break;
+    const [br,bc] = boundary[Math.floor(Math.random()*boundary.length)];
+    next[br][bc] = 0;
+  }
+  return next;
+}
+
+function growCluster(grid, count) {
+  let next = grid.map(row=>[...row]);
+  for (let i = 0; i < count; i++) {
+    const candidates = [];
+    for (let r = 0; r < MAP_G; r++) {
+      for (let c = 0; c < MAP_G; c++) {
+        if (next[r][c]) continue;
+        const adj = [[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
+        if (adj.some(([nr,nc]) => nr>=0&&nr<MAP_G&&nc>=0&&nc<MAP_G&&next[nr][nc]>0))
+          candidates.push([r,c]);
+      }
+    }
+    if (!candidates.length) break;
+    const [tr,tc] = candidates[Math.floor(Math.random()*candidates.length)];
+    const maxD = Math.max(...next.flat().filter(v=>v>0), 0);
+    next[tr][tc] = maxD + 1;
+  }
+  return next;
+}
+
+function mapThreat(spreadCount) {
+  if (spreadCount <= 8)  return { level: 'LOW',      mult: 1.0, color: '#48bb78' };
+  if (spreadCount <= 20) return { level: 'MODERATE', mult: 1.3, color: '#f6ad55' };
+  return                        { level: 'CRITICAL', mult: 1.6, color: '#e53e3e' };
+}
+
+function tileDepthClass(depth) {
+  if (!depth) return '';
+  if (depth <= 2) return 'd1';
+  if (depth <= 4) return 'd2';
+  if (depth <= 6) return 'd3';
+  if (depth <= 9) return 'd4';
+  return 'd5';
+}
+
+function startSpreadTimer() {
+  stopSpreadTimer();
+  if (!spreadPaused) {
+    spreadTimer = setInterval(() => {
+      mapGrid = spreadOneTile(mapGrid);
+      renderMap();
+    }, 3000);
+  }
+}
+
+function stopSpreadTimer() {
+  if (spreadTimer) { clearInterval(spreadTimer); spreadTimer = null; }
+}
+
+function pauseSpread()  { spreadPaused = true;  stopSpreadTimer(); }
+function resumeSpread() { spreadPaused = false; startSpreadTimer(); }
+
+// ══════════════════════════════════════════════════════════════════════
+//  COMBAT ENGINE  (ported from App.js simulateCombat)
+// ══════════════════════════════════════════════════════════════════════
+
+function simulateCombat(loadedSlots, diffMult = 1.0) {
+  const alive     = arr => arr.filter(u => u.hp > 0);
+  const lowestHp  = arr => { const a = alive(arr); return a.length ? a.reduce((m,u) => u.hp<m.hp?u:m) : null; };
+  const highestHp = arr => { const a = alive(arr); return a.length ? a.reduce((m,u) => u.hp>m.hp?u:m) : null; };
+
+  const heroes = loadedSlots.map((slot, i) => {
+    const base = ARCHETYPE_STATS[slot.agentName];
+    const pool = SKILL_POOL[slot.agentName];
+    const equipped = (slot.equippedSkills || []).filter(Boolean);
+    const skills = equipped.map(sk => ({ ...sk, cdRemaining: 0 }));
+    return {
+      id: i, name: slot.agentName, role: slot.agentRole,
+      behavior: slot.behavior,
+      hp: base.hp, maxHp: base.hp, atk: base.atk, speed: base.speed,
+      shield: 0, shieldMax: base.shieldMax || 0,
+      skills, signature: pool?.signature || null,
+      mark: false, pulseInstability: false,
+      taunted: 0, stunned: 0, counterEdge: false, armorResonanceStacks: 0,
+    };
+  });
+
+  const gHp  = Math.round(120 * diffMult);
+  const gAtk = Math.round(22 * diffMult);
+  const goblins = [
+    { id:10, name:'Goblin A', pos:0, hp:gHp, maxHp:gHp, atk:gAtk, shock:0, burn:0, isolated:false, stunned:0, mark:false },
+    { id:11, name:'Goblin B', pos:1, hp:gHp, maxHp:gHp, atk:gAtk, shock:0, burn:0, isolated:false, stunned:0, mark:false },
+    { id:12, name:'Goblin C', pos:2, hp:gHp, maxHp:gHp, atk:gAtk, shock:0, burn:0, isolated:false, stunned:0, mark:false },
+  ];
+
+  const burnZones = [];
+  let drone = null;
+  const log = [];
+  let round = 0;
+
+  const applyDmg  = (unit, dmg) => { unit.hp = Math.max(0, unit.hp - dmg); };
+
+  const applyShock = (source, target, bounces, thornwall) => {
+    if (target.hp <= 0 || target.shock > 0) return;
+    const dmg = Math.floor(source.atk * 0.5);
+    target.shock = 2;
+    applyDmg(target, dmg);
+    log.push(`    ⚡ SHOCK arcs to ${target.name}  −${dmg}`);
+    if (target.hp === 0) log.push(`  ✗ ${target.name} defeated!`);
+    let extra = bounces;
+    if (thornwall && thornwall.hp > 0 && thornwall.shield > 0) {
+      extra += 1;
+      log.push(`    ⚡ SHOCK relayed through Fortress Field (+1 bounce)`);
+    }
+    if (extra > 0) {
+      const adj = goblins.filter(g => g.id!==target.id && Math.abs(g.pos-target.pos)===1 && g.hp>0 && g.shock===0);
+      for (let b = 0; b < Math.min(extra, adj.length); b++) applyShock(source, adj[b], 0, null);
+    }
+  };
+
+  const pickTarget = (hero, liveGobs) => {
+    if (hero.behavior === 'Attack Weakest')  return lowestHp(liveGobs);
+    if (hero.behavior === 'Attack Strongest') return highestHp(liveGobs);
+    if (hero.behavior === 'Execute Low HP') {
+      const low = liveGobs.filter(g => g.hp/g.maxHp < 0.30);
+      return low.length ? low[0] : liveGobs[0];
+    }
+    return liveGobs[0];
+  };
+
+  const thornwall = heroes.find(h => h.name === 'Thornwall');
+  const solin     = heroes.find(h => h.name === 'Solin');
+
+  while (alive(heroes).length > 0 && alive(goblins).length > 0 && round < 30) {
+    round++;
+    log.push(`── Round ${round} ──`);
+    let chainLoggedThisRound = false;
+
+    // Start-of-round signatures
+    if (thornwall && thornwall.hp > 0 && thornwall.shieldMax > 0) {
+      thornwall.shield = thornwall.shieldMax;
+      log.push(`  🛡 ${thornwall.name}: Fortress Field active (${thornwall.shield} HP shield)`);
+    }
+    if (solin && solin.hp > 0) {
+      let best = null, maxCd = 0;
+      for (const h of alive(heroes)) {
+        if (h.id === solin.id) continue;
+        for (const sk of h.skills) {
+          if (sk.cdRemaining > maxCd && !h.pulseInstability) { maxCd = sk.cdRemaining; best = h; }
+        }
+      }
+      if (best && maxCd > 0) {
+        const sk = best.skills.reduce((m,s) => s.cdRemaining>m.cdRemaining?s:m, {cdRemaining:0});
+        sk.cdRemaining = Math.max(1, sk.cdRemaining - 1);
+        log.push(`  ⚡ ${solin.name}: Pulse Engine — ${best.name}'s [${sk.name}] −1 CD`);
+      }
+    }
+
+    const turnOrder = alive(heroes).slice().sort((a,b) => b.speed - a.speed);
+
+    let protectedId = null;
+    const protector = turnOrder.find(h => h.behavior === 'Protect Allies');
+    if (protector) {
+      const t = lowestHp(heroes);
+      if (t) { protectedId = t.id; log.push(`  ${protector.name} shields ${t.name} — dmg halved.`); }
+    }
+
+    const taunter = heroes.find(h => h.name==='Thornwall' && h.hp>0 && h.taunted>0);
+
+    for (const hero of turnOrder) {
+      if (hero.hp <= 0) continue;
+      const liveGobs = alive(goblins);
+      if (!liveGobs.length) break;
+
+      let skillFired = false;
+      for (const sk of hero.skills) {
+        if (sk.cdRemaining > 0 || sk.category === 'Passive') continue;
+        skillFired = true;
+        sk.cdRemaining = sk.cooldown;
+        const target = pickTarget(hero, liveGobs);
+        if (!target) break;
+        log.push(`  ✦ ${hero.name}: [${sk.name}]`);
+
+        if (sk.id === 'nyx_1') {
+          const t = target.mark ? target : (liveGobs.find(g=>g.mark) || target);
+          const mult = t.mark ? 2 : 1;
+          const dmg  = Math.floor(hero.atk * mult);
+          applyDmg(t, dmg);
+          if (t.mark) { t.mark = false; log.push(`    Execution Dive: MARK detonated! −${dmg} (${t.hp}/${t.maxHp})`); }
+          else         log.push(`    Execution Dive: −${dmg} (${t.hp}/${t.maxHp})`);
+          if (t.hp===0) log.push(`  ✗ ${t.name} defeated!`);
+        } else if (sk.id === 'nyx_2') {
+          applyDmg(target, hero.atk);
+          log.push(`    Phantom Step [bypasses intercept]: ${target.name} −${hero.atk} (${target.hp}/${target.maxHp})`);
+          if (target.hp===0) log.push(`  ✗ ${target.name} defeated!`);
+        } else if (sk.id === 'nyx_4') {
+          const prey = liveGobs.find(g=>g.mark&&g.hp/g.maxHp<0.40&&g.isolated) || target;
+          const mult = (prey.mark&&prey.hp/prey.maxHp<0.40) ? 3 : 1;
+          const dmg  = Math.floor(hero.atk*mult);
+          applyDmg(prey, dmg);
+          log.push(`    Predator's Finish${mult===3?' [EXECUTE!]':''}: ${prey.name} −${dmg} (${prey.hp}/${prey.maxHp})`);
+          if (prey.hp===0) log.push(`  ✗ ${prey.name} defeated!`);
+        } else if (sk.id === 'nyx_5') {
+          const wasMarked = target.mark;
+          applyDmg(target, hero.atk);
+          target.mark = true;
+          log.push(`    Stalk: ${target.name} −${hero.atk} [MARK refreshed] (${target.hp}/${target.maxHp})`);
+          if (wasMarked) { applyDmg(target, hero.atk); log.push(`    Stalk: second hit −${hero.atk} (${target.hp}/${target.maxHp})`); }
+          if (target.hp===0) log.push(`  ✗ ${target.name} defeated!`);
+        } else if (sk.id === 'thorn_1') {
+          hero.taunted = 2;
+          log.push(`    Iron Taunt: all enemies target ${hero.name} for 2 rounds!`);
+        } else if (sk.id === 'thorn_4') {
+          hero.counterEdge = true;
+          log.push(`    Counter Edge: ${hero.name} readies retaliation.`);
+        } else if (sk.id === 'thorn_5') {
+          const dmg = Math.floor(hero.atk * 2);
+          applyDmg(target, dmg); target.stunned = 1;
+          log.push(`    Ground Slam: ${target.name} −${dmg} [STUNNED] (${target.hp}/${target.maxHp})`);
+          if (target.hp===0) log.push(`  ✗ ${target.name} defeated!`);
+        } else if (sk.id === 'vex_1') {
+          applyDmg(target, hero.atk);
+          log.push(`    Chain Arc: ${target.name} −${hero.atk}`);
+          if (target.hp===0) log.push(`  ✗ ${target.name} defeated!`);
+          const adj = liveGobs.filter(g=>g.id!==target.id&&Math.abs(g.pos-target.pos)===1&&g.shock===0);
+          const chainRelayFires1 = (thornwall&&thornwall.hp>0&&thornwall.shield>0) && adj.length > 0;
+          if (chainRelayFires1 && !chainLoggedThisRound) {
+            log.push('[CHAIN-HEADER]⚡⚡ CHAIN: SHOCK → SHIELD RELAY → ARC SPREAD ⚡⚡');
+            chainLoggedThisRound = true;
+          }
+          let spread = 0;
+          for (const a of adj) { if (spread>=2) break; applyShock(hero,a,0,thornwall); spread++; }
+          if (chainRelayFires1) log.push('[CHAIN-FOOTER]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        } else if (sk.id === 'vex_2') {
+          const shocked = liveGobs.filter(g=>g.shock>0);
+          const t2 = shocked.length ? shocked.reduce((m,g)=>g.hp<m.hp?g:m) : target;
+          const mult = t2.shock>0 ? 2 : 1;
+          const dmg  = Math.floor(hero.atk*mult);
+          applyDmg(t2, dmg);
+          if (t2.shock>0) { t2.shock++; log.push(`    Arc Discharge: ${t2.name} −${dmg} [SHOCK extended] (${t2.hp}/${t2.maxHp})`); }
+          else log.push(`    Arc Discharge: ${t2.name} −${dmg} (${t2.hp}/${t2.maxHp})`);
+          if (t2.hp===0) log.push(`  ✗ ${t2.name} defeated!`);
+        } else if (sk.id === 'vex_3') {
+          const shocked = liveGobs.filter(g=>g.shock>0&&g.hp>0);
+          if (shocked.length >= 2) {
+            log.push(`    ⚡ Overcharge: detonating ${shocked.length} SHOCKED targets!`);
+            for (const g of shocked) {
+              const dmg = Math.floor(hero.atk*1.5);
+              applyDmg(g,dmg); g.shock=0;
+              log.push(`      ${g.name} −${dmg} (${g.hp}/${g.maxHp})`);
+              if (g.hp===0) log.push(`  ✗ ${g.name} defeated!`);
+            }
+          } else {
+            applyDmg(target, hero.atk);
+            log.push(`    Overcharge (needs 2+ SHOCKED): ${target.name} −${hero.atk} (${target.hp}/${target.maxHp})`);
+            if (target.hp===0) log.push(`  ✗ ${target.name} defeated!`);
+          }
+        } else if (sk.id === 'solin_2') {
+          const weakest = lowestHp(heroes);
+          if (weakest) {
+            const healed = Math.floor(weakest.maxHp*0.30);
+            weakest.hp = Math.min(weakest.maxHp, weakest.hp+healed);
+            log.push(`    Flow Burst: ${weakest.name} +${healed} HP (${weakest.hp}/${weakest.maxHp})`);
+            const sk2 = weakest.skills.find(s=>s.cdRemaining>0);
+            if (sk2) { sk2.cdRemaining=Math.max(1,sk2.cdRemaining-1); log.push(`    ${weakest.name} [${sk2.name}] CD −1`); }
+          }
+        } else if (sk.id === 'solin_3') {
+          const others = alive(heroes).filter(h=>h.id!==solin.id);
+          if (others.length) {
+            const best2 = others.reduce((m,h)=>{
+              const mx = Math.max(...h.skills.map(s=>s.cdRemaining),0);
+              return mx > Math.max(...m.skills.map(s=>s.cdRemaining),0) ? h : m;
+            }, others[0]);
+            best2.skills.forEach(s=>{ s.cdRemaining=0; });
+            best2.pulseInstability = true;
+            log.push(`    ⚡ Overclock: all ${best2.name} cooldowns cleared! [PULSE instability]`);
+          }
+        } else if (sk.id === 'kael_1') {
+          const burning = liveGobs.filter(g=>g.burn>0&&g.hp>0);
+          if (burning.length) {
+            log.push(`    💥 Detonation Protocol: igniting ${burning.length} BURN target(s)!`);
+            for (const g of burning) {
+              const dmg = Math.floor(hero.atk*1.5);
+              applyDmg(g,dmg);
+              log.push(`      ${g.name} −${dmg} (${g.hp}/${g.maxHp})`);
+              if (g.hp===0) log.push(`  ✗ ${g.name} defeated!`);
+            }
+          } else {
+            applyDmg(target, hero.atk);
+            log.push(`    Detonation Protocol (no BURN): ${target.name} −${hero.atk} (${target.hp}/${target.maxHp})`);
+            if (target.hp===0) log.push(`  ✗ ${target.name} defeated!`);
+          }
+        } else if (sk.id === 'kael_4') {
+          const bonus = (target.burn||0)*8;
+          const dmg = hero.atk+bonus;
+          applyDmg(target,dmg);
+          log.push(`    Precision Strike: ${target.name} −${dmg}${bonus?` (+${bonus} BURN)`:''}  (${target.hp}/${target.maxHp})`);
+          if (target.hp===0) log.push(`  ✗ ${target.name} defeated!`);
+        } else if (sk.id === 'kael_5') {
+          drone = { pos: target.pos };
+          log.push(`    🤖 Drone Support: Incendiary Drone at position ${target.pos}!`);
+        } else {
+          applyDmg(target, hero.atk);
+          log.push(`    ${target.name} −${hero.atk} (${target.hp}/${target.maxHp})`);
+          if (target.hp===0) log.push(`  ✗ ${target.name} defeated!`);
+        }
+        break;
+      }
+
+      if (!skillFired) {
+        if (hero.behavior === 'Protect Allies') { log.push(`  ${hero.name} holds defensive stance.`); continue; }
+        if (hero.behavior === 'Support') {
+          const t = lowestHp(heroes);
+          if (t) { const h2 = Math.min(20, t.maxHp-t.hp); t.hp+=h2; log.push(`  ${hero.name} heals ${t.name} +${h2} HP  (${t.hp}/${t.maxHp})`); }
+          continue;
+        }
+        const lv2 = alive(goblins);
+        if (!lv2.length) continue;
+        const target = pickTarget(hero, lv2);
+        if (!target) continue;
+
+        let atk = hero.atk;
+        if (hero.name==='Nyx' && burnZones.length) {
+          if (burnZones.find(z=>z.pos===target.pos)) target.isolated=true;
+        }
+        let markBonus = false;
+        if (hero.name==='Nyx' && target.mark) { atk=Math.floor(atk*1.5); target.mark=false; markBonus=true; }
+
+        applyDmg(target, atk);
+        log.push(`  ${hero.name} → ${target.name}  −${atk}${markBonus?' [MARK!]':''}  (${target.hp}/${target.maxHp})`);
+        if (target.hp===0) log.push(`  ✗ ${target.name} defeated!`);
+
+        if (hero.name==='Nyx' && target.hp>0) { target.mark=true; log.push(`    🎯 Shadow Strike: ${target.name} MARK'd`); }
+        if (hero.name==='Vex' && target.hp>0) {
+          target.shock=Math.max(target.shock,2);
+          const adj = lv2.filter(g=>g.id!==target.id&&Math.abs(g.pos-target.pos)===1&&g.hp>0);
+          let bounces = (thornwall&&thornwall.hp>0&&thornwall.shield>0) ? 1 : 0;
+          const chainRelayFires = bounces > 0 && adj.length > 0;
+          if (chainRelayFires && !chainLoggedThisRound) {
+            log.push('[CHAIN-HEADER]⚡⚡ CHAIN: SHOCK → SHIELD RELAY → ARC SPREAD ⚡⚡');
+            chainLoggedThisRound = true;
+          }
+          log.push(`    ⚡ Cascade Initiation: ${target.name} SHOCK'd`);
+          if (adj.length) applyShock(hero,adj[0],bounces,thornwall);
+          if (chainRelayFires) log.push('[CHAIN-FOOTER]━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        }
+        if (hero.name==='Kael') {
+          if (!burnZones.find(z=>z.pos===target.pos)) {
+            burnZones.push({pos:target.pos, duration:3});
+            log.push(`    🔥 Incendiary Grid: BURN zone at position ${target.pos} (3 rounds)`);
+          }
+          target.burn=Math.max(target.burn,2);
+          log.push(`    🔥 ${target.name} BURN'd (${target.burn} rounds)`);
+        }
+      }
+    }
+
+    if (!alive(goblins).length) break;
+
+    // End-of-round: BURN zones tick
+    for (const zone of burnZones) {
+      const occ = alive(goblins).filter(g=>g.pos===zone.pos);
+      for (const g of occ) { if (!g.burn) { g.burn=2; log.push(`    🔥 BURN zone: ${g.name} enters zone → BURN applied`); } }
+    }
+    // BURN damage
+    for (const g of alive(goblins)) {
+      if (g.burn>0) { applyDmg(g,6); log.push(`    🔥 ${g.name} BURN tick  −6  (${g.hp}/${g.maxHp})`); if (g.hp===0) log.push(`  ✗ ${g.name} burned down!`); }
+    }
+    // SHOCK damage
+    for (const g of alive(goblins)) {
+      if (g.shock>0) { applyDmg(g,4); log.push(`    ⚡ ${g.name} SHOCK tick  −4  (${g.hp}/${g.maxHp})`); if (g.hp===0) log.push(`  ✗ ${g.name} shocked out!`); }
+    }
+    // Drone
+    if (drone) {
+      alive(goblins).filter(g=>g.pos===drone.pos).forEach(g=>{
+        g.burn=Math.max(g.burn,2);
+        log.push(`    🤖 Drone: ${g.name} BURN'd at position ${drone.pos}`);
+      });
+    }
+    if (!alive(goblins).length) break;
+
+    // Goblin attacks
+    const activeTank = heroes.find(h=>h.name==='Thornwall'&&h.hp>0);
+    for (const goblin of goblins) {
+      if (goblin.hp<=0||!alive(heroes).length) continue;
+      if (goblin.stunned>0) { log.push(`  ${goblin.name} is stunned — skips action`); continue; }
+      let gTarget = taunter?.hp>0 ? taunter : lowestHp(heroes);
+      if (!gTarget) break;
+      let dmg = goblin.atk;
+      if (gTarget.id===protectedId) dmg=Math.floor(dmg*.5);
+      const tankOther = activeTank&&activeTank.hp>0&&activeTank.id!==gTarget.id;
+      if (tankOther) {
+        let tankShare = Math.floor(dmg*.5);
+        const heroShare = dmg-tankShare;
+        if (activeTank.shield>0) {
+          const abs=Math.min(activeTank.shield,tankShare);
+          activeTank.shield-=abs; tankShare-=abs;
+          if (abs>0) log.push(`    🛡 SHIELD absorbs ${abs} (${activeTank.shield} remaining)`);
+        }
+        if (activeTank.counterEdge) {
+          activeTank.counterEdge=false;
+          const retDmg=Math.floor(activeTank.atk*1.5);
+          applyDmg(goblin,retDmg); activeTank.shield=Math.min(activeTank.shieldMax,activeTank.shield+10);
+          log.push(`    ⚔ Counter Edge: ${activeTank.name} retaliates! ${goblin.name} −${retDmg}`);
+          if (goblin.hp===0) log.push(`  ✗ ${goblin.name} defeated by Counter Edge!`);
+        }
+        applyDmg(gTarget,heroShare);
+        if (tankShare>0) applyDmg(activeTank,tankShare);
+        log.push(`  ${goblin.name} → ${gTarget.name}  −${heroShare}  |  ${activeTank.name} intercepts  −${tankShare}`);
+        if (gTarget.hp===0) log.push(`  ✗ ${gTarget.name} defeated!`);
+        if (activeTank.hp===0) log.push(`  ✗ ${activeTank.name} defeated!`);
+      } else {
+        if (gTarget.shield>0) { const abs=Math.min(gTarget.shield,dmg); gTarget.shield-=abs; dmg-=abs; if (abs>0) log.push(`    🛡 SHIELD absorbs ${abs} (${gTarget.shield} remaining)`); }
+        applyDmg(gTarget,dmg);
+        if (dmg>0) log.push(`  ${goblin.name} → ${gTarget.name}  −${dmg}  (${gTarget.hp}/${gTarget.maxHp})`);
+        if (gTarget.hp===0) log.push(`  ✗ ${gTarget.name} defeated!`);
+      }
+    }
+
+    // Duration decrements
+    for (const g of goblins) { if (g.burn>0) g.burn--; if (g.shock>0) g.shock--; if (g.stunned>0) g.stunned--; }
+    for (const h of heroes) {
+      if (h.taunted>0) h.taunted--;
+      h.pulseInstability=false;
+      for (const sk of h.skills) { if (sk.cdRemaining>0) sk.cdRemaining--; }
+    }
+    for (let i=burnZones.length-1;i>=0;i--) {
+      burnZones[i].duration--;
+      if (burnZones[i].duration<=0) { log.push(`    🔥 BURN zone at position ${burnZones[i].pos} expires.`); burnZones.splice(i,1); }
+    }
+    for (const g of alive(goblins)) {
+      const adjAlive = alive(goblins).filter(o=>o.id!==g.id&&Math.abs(o.pos-g.pos)===1);
+      g.isolated = adjAlive.length===0;
+    }
+  }
+
+  if (alive(heroes).length>0&&alive(goblins).length>0) log.push('── Stalemate — neither side falls. ──');
+  return { log, won: alive(goblins).length===0, heroes, goblins };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RENDER — MAP
+// ══════════════════════════════════════════════════════════════════════
+
+function renderMap() {
+  const flat = mapGrid.flat();
+  const spreadCount = flat.filter(v=>v>0).length;
+  const threat = mapThreat(spreadCount);
+
+  document.getElementById('map-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Spread</div>
+      <div class="stat-value">${spreadCount} tiles</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Threat</div>
+      <div class="stat-value" style="color:${threat.color}">${threat.level}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Status</div>
+      <div class="stat-value" style="font-size:12px;color:${spreadPaused?'#f6ad55':'#64748b'}">${spreadPaused?'⏸ PAUSED':'◉ LIVE'}</div>
+    </div>`;
+
+  const grid = document.getElementById('map-grid');
+  grid.innerHTML = '';
+  for (let r = 0; r < MAP_G; r++) {
+    for (let c = 0; c < MAP_G; c++) {
+      const d = mapGrid[r][c];
+      const tile = document.createElement('div');
+      tile.className = 'map-tile' + (d ? ' ' + tileDepthClass(d) : '') + (d ? ' tap' : '');
+      if (d) tile.onclick = () => openBrief(r, c);
+      grid.appendChild(tile);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RENDER — LOADOUT
+// ══════════════════════════════════════════════════════════════════════
+
+function renderLoadout() {
+  const usedIds = slots.filter(Boolean).map(s => s.agentId);
+  const configured = slots.filter(Boolean);
+
+  let html = `
+    <div class="section-header">
+      <div class="section-title">Loadout Builder</div>
+      <div class="section-sub">${configured.length} / 3 8gents configured</div>
+    </div>`;
+
+  for (let i = 0; i < 3; i++) {
+    const slot = slots[i];
+    html += `<div class="slot-card">
+      <div class="slot-head">
+        <div class="slot-badge">${i+1}</div>
+        <div class="slot-label">Slot ${i+1}</div>
+        ${slot ? `<span class="slot-remove" onclick="removeSlot(${i})">Remove</span>` : ''}
+      </div>`;
+
+    if (slot) {
+      const sig = SKILL_POOL[slot.agentName]?.signature;
+      const base = ARCHETYPE_STATS[slot.agentName];
+      html += `<div class="slot-body">
+        <div class="select-row" onclick="openAgentPicker(${i})">
+          <div>
+            <div class="row-cap">8GENT</div>
+            <div class="row-val">${slot.agentName}</div>
+            <div class="row-sub">${slot.agentRole} · ${base.hp}HP · ${base.atk}ATK</div>
+          </div>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="select-row" onclick="openBehaviorPicker(${i})">
+          <div>
+            <div class="row-cap">Behavior Priority</div>
+            <div class="row-val">${slot.behavior}</div>
+          </div>
+          <span class="chevron">▾</span>
+        </div>`;
+
+      if (sig) {
+        html += `<div class="sig-row">
+          <div class="sig-badge">SIG</div>
+          <div style="flex:1">
+            <div class="sig-name">${sig.name}</div>
+            <div class="sig-effect">${sig.effect}</div>
+          </div>
+          <div class="status-tag">${sig.statusTag}</div>
+        </div>`;
+      }
+
+      html += `<div class="row-cap-standalone">Active Skills (equip 2)</div>`;
+      for (let si = 0; si < 2; si++) {
+        const eq = (slot.equippedSkills || [])[si];
+        html += `<div class="skill-row-wrap">
+          <div class="skill-slot ${eq?'filled':''}" onclick="openSkillPicker(${i},${si})">
+            ${eq
+              ? `<div class="skill-slot-cat">${eq.category}</div>
+                 <div class="skill-slot-name">${eq.name}</div>
+                 <div class="skill-slot-effect">${eq.effect}</div>`
+              : `<div class="skill-slot-empty">+ Equip active skill</div>`}
+          </div>
+          ${eq ? `<span class="skill-clear" onclick="clearSkill(${i},${si})">✕</span>` : ''}
+        </div>`;
+      }
+      html += `</div>`;
+    } else {
+      html += `<button class="add-btn" onclick="openAgentPicker(${i})">+ Add 8gent</button>`;
+    }
+    html += `</div>`;
+  }
+
+  // Summary
+  html += `<div class="summary-card"><div class="summary-title">Team Summary</div>`;
+  if (!configured.length) {
+    html += `<div class="summary-empty">No 8gents configured yet.<br>Add units above to build your loadout.</div>`;
+  } else {
+    configured.forEach((slot, i) => {
+      html += `<div class="summary-row">
+        <div class="summary-left">
+          <span class="summary-num">#${i+1}</span>
+          <div><div class="summary-name">${slot.agentName}</div><div class="summary-role">${slot.agentRole}</div></div>
+        </div>
+        <div class="behavior-tag">${slot.behavior}</div>
+      </div>`;
+    });
+  }
+  html += `</div>`;
+
+  document.getElementById('loadout-wrap').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  RENDER — DUNGEON
+// ══════════════════════════════════════════════════════════════════════
+
+function renderDungeon() {
+  const filled = slots.filter(Boolean);
+  const canRun = filled.length === 3 && !dungeonRunning && dungeonResult === null;
+  const multLabel = mapDungeonActive ? ` · Enemy scale: ${mapDiffMult}×` : '';
+  const gHp  = Math.round(120 * (mapDungeonActive ? mapDiffMult : 1.0));
+  const gAtk = Math.round(22 * (mapDungeonActive ? mapDiffMult : 1.0));
+
+  let html = `
+    <div class="section-header">
+      <div class="section-title">Dungeon Run</div>
+      <div class="section-sub">Simulate your loadout in tactical combat${multLabel}</div>
+    </div>
+    <div class="teams-row">
+      <div class="team-col">
+        <div class="team-label">Your Team</div>
+        ${slots.map(slot => slot
+          ? `<div class="unit-card">
+               <div class="unit-name">${slot.agentName}</div>
+               <div class="unit-role">${slot.agentRole}</div>
+               <div class="unit-stats">${ARCHETYPE_STATS[slot.agentName].hp}HP · ${ARCHETYPE_STATS[slot.agentName].atk}ATK</div>
+               ${(slot.equippedSkills||[]).filter(Boolean).map(sk=>`<div class="unit-skill">⬡ ${sk.name}</div>`).join('')}
+             </div>`
+          : `<div class="unit-card empty"><span style="color:var(--muted);font-size:12px">Empty</span></div>`
+        ).join('')}
+      </div>
+      <div class="vs-col"><span class="vs-text">VS</span></div>
+      <div class="team-col">
+        <div class="team-label" style="text-align:right">Enemies</div>
+        ${['A','B','C'].map(l=>`<div class="unit-card enemy">
+          <div class="unit-name" style="color:#fc8181">Goblin ${l}</div>
+          <div class="unit-role" style="color:var(--muted)">Goblin</div>
+          <div class="unit-stats">${gHp}HP · ${gAtk}ATK</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+
+  if (filled.length < 3 && dungeonResult === null && !dungeonRunning) {
+    html += `<div class="warn-box"><div class="warn-text">Fill all 3 loadout slots in the Loadout tab before running.</div></div>`;
+  }
+
+  if (dungeonResult === null) {
+    html += `<button class="run-btn" ${canRun?'':'disabled'} onclick="runDungeon()">${dungeonRunning?'Running…':'Run Dungeon'}</button>`;
+  }
+
+  if (dungeonLog.length) {
+    html += `<div class="log-box" id="combat-log-box">
+      <div class="log-title">Combat Log</div>
+      <div id="combat-log">
+        ${dungeonLog.map(line=>`<div class="log-line ${lineClass(line)}">${escHtml(line.startsWith('[CHAIN-HEADER]')||line.startsWith('[CHAIN-FOOTER]')?line.slice(14):line)}</div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  if (dungeonResult !== null) {
+    const won = dungeonResult === 'win';
+    html += `<div class="result-banner ${won?'win':'lose'}">
+      <div class="result-text ${won?'win':'lose'}">${won?'⚔  VICTORY':'✗  DEFEAT'}</div>
+      <div class="result-sub">${won?'All goblins eliminated.':'Your team was wiped out.'}</div>
+      ${mapDungeonActive?`<div class="result-mult">Enemy scale was ${mapDiffMult}× — map will ${won?'shrink −2 tiles':'grow +2 tiles'}.</div>`:''}
+    </div>`;
+
+    if (mapDungeonActive) {
+      html += `<button class="secondary-btn accent" onclick="returnToMap(${won})">← Return to Map</button>`;
+    }
+    html += `<button class="secondary-btn" onclick="resetDungeon()">Run Again</button>`;
+  }
+
+  document.getElementById('dungeon-wrap').innerHTML = html;
+
+  // Scroll log to bottom
+  const logBox = document.getElementById('combat-log-box');
+  if (logBox) logBox.scrollTop = logBox.scrollHeight;
+}
+
+function lineClass(line) {
+  if (line.startsWith('[CHAIN-HEADER]')) return 'chain-header';
+  if (line.startsWith('[CHAIN-FOOTER]')) return 'chain-footer';
+  if (line.startsWith('──'))          return 'muted';
+  if (line.includes('✗'))             return 'danger';
+  if (line.includes('heals')||line.includes('Flow Burst')||line.includes('Barrier')) return 'success';
+  if (line.includes('🛡')||line.includes('Fortress Field')||line.includes('shields')) return 'warn';
+  if (line.includes('🔥')||line.includes('BURN')||line.includes('burned'))           return 'burn';
+  if (line.includes('⚡')||line.includes('SHOCK')||line.includes('Cascade')||line.includes('Overcharge')) return 'shock';
+  if (line.includes('🎯')||line.includes('MARK')||line.includes('Execution')||line.includes("Predator")) return 'mark';
+  if (line.includes('✦'))             return 'accent';
+  if (line.includes('💥')||line.includes('Overclock')) return 'burst';
+  return '';
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function runDungeon() {
+  const filled = slots.filter(Boolean);
+  if (filled.length < 3 || dungeonRunning) return;
+
+  dungeonRunning = true;
+  dungeonLog = [];
+  dungeonResult = null;
+  dungeonLogIdx = 0;
+  renderDungeon();
+
+  const mult = mapDungeonActive ? mapDiffMult : 1.0;
+  const { log, won } = simulateCombat(filled, mult);
+
+  for (const line of log) {
+    if (!dungeonRunning) return;
+    const isChainHeader = line.startsWith('[CHAIN-HEADER]');
+    const isChainFooter = line.startsWith('[CHAIN-FOOTER]');
+    if (isChainHeader) await delay(600);
+    await delay(65);
+    dungeonLog.push(line);
+    const logEl = document.getElementById('combat-log');
+    const box   = document.getElementById('combat-log-box');
+    if (logEl) {
+      const div = document.createElement('div');
+      div.className = 'log-line ' + lineClass(line);
+      div.textContent = isChainHeader ? line.slice(14) : isChainFooter ? line.slice(14) : line;
+      logEl.appendChild(div);
+      if (box) box.scrollTop = box.scrollHeight;
+    }
+    if (isChainFooter) await delay(600);
+  }
+
+  await delay(400);
+  dungeonResult = won ? 'win' : 'lose';
+  dungeonRunning = false;
+  renderDungeon();
+}
+
+function resetDungeon() {
+  dungeonLog    = [];
+  dungeonResult = null;
+  dungeonRunning= false;
+  renderDungeon();
+}
+
+function returnToMap(won) {
+  mapGrid = won ? shrinkCluster(mapGrid, 2) : growCluster(mapGrid, 2);
+  mapDungeonActive = false;
+  resetDungeon();
+  resumeSpread();
+  showTab('map');
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════════════════════════════════════
+//  RENDER — BATTLE VIZ
+// ══════════════════════════════════════════════════════════════════════
+
+function renderBattle() {
+  const filled = slots.filter(Boolean);
+  const wrap = document.getElementById('battle-wrap');
+
+  if (filled.length < 3) {
+    wrap.innerHTML = `<div class="section-header"><div class="section-title">Battle Viz</div></div>
+      <div class="bv-empty">Fill all 3 loadout slots to watch a battle play out.</div>`;
+    return;
+  }
+
+  if (!battleState) {
+    const result = simulateCombat(filled, 1.0);
+    battleState = result;
+    battleIdx   = 0;
+    battlePlaying = false;
+  }
+
+  const events   = battleState.log;
+  const event    = events[battleIdx] || '';
+  const pct      = events.length ? ((battleIdx / events.length) * 100).toFixed(0) : 0;
+
+  const playerNames = filled.map(s => s.agentName);
+  const enemyNames  = ['Goblin A', 'Goblin B', 'Goblin C'];
+
+  const unitHtml = (name, isEnemy, idx) => {
+    const statusClass = getUnitStatus(name, battleIdx, events, isEnemy);
+    const hpPct = estimateHp(name, battleIdx, events, isEnemy);
+    return `<div class="unit-wrapper">
+      <div class="unit-circle ${isEnemy?'enemy':''} ${statusClass}">${name.split(' ')[0]}</div>
+      <div class="hp-bar-bg"><div class="hp-bar" style="width:${hpPct}%"></div></div>
+    </div>`;
+  };
+
+  wrap.innerHTML = `
+    <div class="section-header">
+      <div class="section-title">Battle ${battleState.won?'— Victory':'— Defeat'}</div>
+      <div class="section-sub">Auto-playback of last simulated combat</div>
+    </div>
+    <div class="formation-row">
+      <div class="bv-team-col">
+        <div class="bv-team-label">Your Team</div>
+        ${playerNames.map((n,i)=>unitHtml(n,false,i)).join('')}
+      </div>
+      <div class="bv-vs-col"><span style="color:var(--muted);font-weight:800;font-size:14px">VS</span></div>
+      <div class="bv-team-col">
+        <div class="bv-team-label" style="text-align:right">Enemies</div>
+        ${enemyNames.map((n,i)=>unitHtml(n,true,i)).join('')}
+      </div>
+    </div>
+    <div class="bv-log-box">
+      <div class="bv-log-label">Combat Event</div>
+      <div class="bv-log-count">Event ${battleIdx+1} / ${events.length} &nbsp;(${pct}%)</div>
+      <div class="bv-log-event">${escHtml(event)}</div>
+    </div>
+    <div class="bv-controls">
+      <button class="bv-btn" onclick="toggleBattlePlay()">${battlePlaying?'⏸ Pause':'▶ Play'}</button>
+      <button class="bv-btn" style="background:var(--surface);color:var(--muted);border:1px solid var(--border)" onclick="restartBattle()">↻ Reset</button>
+      <div class="speed-group">
+        ${[0.5,1,2].map(s=>`<button class="speed-btn ${battleSpeed===s?'active':''}" onclick="setBattleSpeed(${s})">${s}x</button>`).join('')}
+      </div>
+    </div>
+    <button class="secondary-btn" onclick="newBattle()">▶ New Battle</button>`;
+}
+
+function getUnitStatus(name, idx, events, isEnemy) {
+  // Simple heuristic: look at nearby event lines for status tags
+  const slice = events.slice(Math.max(0, idx-10), idx);
+  const joined = slice.join(' ');
+  if (!isEnemy) {
+    if (name==='Thornwall' && joined.includes('SHIELD')) return 'm-shield';
+    return '';
+  }
+  const gName = name.split(' ')[1]; // A, B, C
+  if (joined.includes('Goblin '+gName+' BURN')) return 'm-burn';
+  if (joined.includes('Goblin '+gName+' SHOCK')) return 'm-shock';
+  if (joined.includes('Goblin '+gName+' MARK')) return 'm-mark';
+  return '';
+}
+
+function estimateHp(name, idx, events, isEnemy) {
+  // Count damage events mentioning this unit up to idx
+  let hp = isEnemy ? 60 : (ARCHETYPE_STATS[name]?.hp || 80);
+  const max = hp;
+  for (let i = 0; i < idx; i++) {
+    const line = events[i];
+    if (!line.includes(name)) continue;
+    const m = line.match(/−(\d+)/);
+    if (m) hp = Math.max(0, hp - parseInt(m[1]));
+    const heal = line.match(/\+(\d+) HP/);
+    if (heal) hp = Math.min(max, hp + parseInt(heal[1]));
+  }
+  return Math.max(0, Math.min(100, (hp/max)*100));
+}
+
+function toggleBattlePlay() {
+  battlePlaying = !battlePlaying;
+  if (battlePlaying) tickBattle();
+  else renderBattle();
+}
+
+function tickBattle() {
+  if (!battlePlaying) return;
+  if (battleIdx < (battleState?.log.length||0) - 1) {
+    battleIdx++;
+    renderBattle();
+    const ms = Math.max(150, Math.floor(400/battleSpeed));
+    battleAnimTimer = setTimeout(tickBattle, ms);
+  } else {
+    battlePlaying = false;
+    renderBattle();
+  }
+}
+
+function restartBattle() {
+  clearTimeout(battleAnimTimer);
+  battlePlaying = false;
+  battleIdx     = 0;
+  renderBattle();
+}
+
+function newBattle() {
+  clearTimeout(battleAnimTimer);
+  battlePlaying = false;
+  battleState   = null;
+  battleIdx     = 0;
+  renderBattle();
+}
+
+function setBattleSpeed(s) {
+  battleSpeed = s;
+  renderBattle();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  INTERVENTION BRIEF
+// ══════════════════════════════════════════════════════════════════════
+
+function buildLoadoutAssessment(spreadCount) {
+  const filled = slots.filter(Boolean);
+  if (filled.length < 3) return null;
+
+  const names    = filled.map(s => s.agentName);
+  const hasVex   = names.includes('Vex');
+  const hasThorn = names.includes('Thornwall');
+  const hasSolin = names.includes('Solin');
+  const hasNyx   = names.includes('Nyx');
+  const hasKael  = names.includes('Kael');
+
+  const threat = mapThreat(spreadCount);
+  const gHp    = Math.round(120 * threat.mult);
+  const gAtk   = Math.round(22  * threat.mult);
+
+  const squadAtk = filled.reduce((sum, s) => sum + ARCHETYPE_STATS[s.agentName].atk, 0);
+  const squadHp  = filled.reduce((sum, s) => sum + ARCHETYPE_STATS[s.agentName].hp,  0);
+
+  const hasRelay = hasVex && hasThorn;
+  const hasSustain = hasSolin || hasThorn;
+  const totalThreat = gHp * 3 + gAtk * 5;
+  const squadPower  = squadAtk * 3 + squadHp;
+
+  let strengthLabel, strengthNote;
+  let weaknessNote;
+  let predictionClass, predictionText;
+
+  if (hasRelay) {
+    strengthLabel = 'Strong';
+    strengthNote  = 'Vex + Thornwall chain relay active — SHOCK bounces will hit multiple targets per round';
+  } else if (hasSustain && squadAtk > 50) {
+    strengthLabel = 'Moderate';
+    strengthNote  = hasSolin ? 'Solin\'s Pulse Engine will accelerate skill cooldowns' : 'Thornwall absorbs punishment and buys time';
+  } else if (squadAtk > 70) {
+    strengthLabel = 'Moderate';
+    strengthNote  = 'High raw attack — can burst down targets before taking heavy damage';
+  } else {
+    strengthLabel = 'Weak';
+    strengthNote  = 'No clear offensive synergy detected — squad relies on attrition';
+  }
+
+  if (!hasRelay && hasVex) {
+    weaknessNote = 'Vex SHOCK chain loses its relay bounce without Thornwall — arc spread limited to 1 target';
+  } else if (!hasRelay && hasThorn) {
+    weaknessNote = 'Thornwall shield relay unused — Fortress Field only provides personal defense without Vex';
+  } else if (!hasSustain) {
+    weaknessNote = 'No sustain — squad will take full enemy counter-damage each round';
+  } else if (!hasNyx && !hasKael) {
+    weaknessNote = 'No MARK or BURN pressure — enemies regenerate initiative each round';
+  } else {
+    weaknessNote = 'Well-rounded squad — no critical gaps';
+  }
+
+  if (hasRelay && threat.mult <= 1.3) {
+    predictionClass = 'win'; predictionText = 'Predicted outcome: Victory';
+  } else if (hasRelay && threat.mult > 1.3 && hasSustain) {
+    predictionClass = 'even'; predictionText = 'Predicted outcome: Contested — relay gives edge but threat is severe';
+  } else if (!hasRelay && threat.mult > 1.3) {
+    predictionClass = 'loss'; predictionText = 'Predicted outcome: High risk of failure';
+  } else if (squadPower > totalThreat * 0.55) {
+    predictionClass = 'even'; predictionText = 'Predicted outcome: Marginal — expect casualties';
+  } else {
+    predictionClass = 'loss'; predictionText = 'Predicted outcome: Likely defeat without synergy';
+  }
+
+  const squadStrengthColor = strengthLabel === 'Strong' ? 'var(--success)' : strengthLabel === 'Moderate' ? 'var(--warn)' : 'var(--danger)';
+
+  return `
+    <div class="assessment-header">Loadout Assessment</div>
+    <div class="assessment-kv">
+      <span class="assessment-kv-label">Squad vs Threat</span>
+      <span class="assessment-kv-value" style="color:${squadStrengthColor}">${strengthLabel}</span>
+    </div>
+    <div class="assessment-detail pos">${strengthNote}</div>
+    <div class="assessment-detail neg">${weaknessNote}</div>
+    <div class="assessment-prediction ${predictionClass}">${predictionText}</div>`;
+}
+
+function openBrief(row, col) {
+  pauseSpread();
+  const spreadCount = mapGrid.flat().filter(v=>v>0).length;
+  const threat      = mapThreat(spreadCount);
+  const diffLabel   = threat.mult <= 1.0 ? 'Easy' : threat.mult <= 1.3 ? 'Moderate' : 'Hard';
+  mapDiffMult = threat.mult;
+
+  document.getElementById('brief-grid').innerHTML = `
+    <div class="brief-stat">
+      <div class="brief-stat-label">Spread Size</div>
+      <div class="brief-stat-value">${spreadCount} tiles</div>
+    </div>
+    <div class="brief-stat">
+      <div class="brief-stat-label">Threat Level</div>
+      <div class="brief-stat-value" style="color:${threat.color}">${threat.level}</div>
+    </div>
+    <div class="brief-stat">
+      <div class="brief-stat-label">Difficulty</div>
+      <div class="brief-stat-value" style="color:${threat.color}">${diffLabel}</div>
+    </div>
+    <div class="brief-stat">
+      <div class="brief-stat-label">Enemy Scale</div>
+      <div class="brief-stat-value" style="color:${threat.color}">${threat.mult}×</div>
+    </div>`;
+
+  const assessment = buildLoadoutAssessment(spreadCount);
+  const assessEl   = document.getElementById('loadout-assessment');
+  if (assessment) {
+    assessEl.innerHTML = assessment;
+    assessEl.classList.remove('hidden');
+  } else {
+    assessEl.innerHTML = '';
+    assessEl.classList.add('hidden');
+  }
+
+  openModal('modal-brief');
+}
+
+function closeBrief() {
+  closeModal('modal-brief');
+  resumeSpread();
+  renderMap();
+}
+
+function briefConfigureLoadout() {
+  closeModal('modal-brief');
+  resumeSpread();
+  showTab('loadout');
+}
+
+function briefBattleNow() {
+  closeModal('modal-brief');
+  mapDungeonActive = true;
+  resetDungeon();
+  showTab('dungeon');
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  LOADOUT PICKER MODALS
+// ══════════════════════════════════════════════════════════════════════
+
+function openAgentPicker(slotIdx) {
+  pickerSlot = slotIdx;
+  const usedIds = slots.filter(Boolean).map(s=>s.agentId);
+  document.getElementById('agent-picker-sub').textContent = `Slot ${slotIdx+1}`;
+  document.getElementById('agent-picker-list').innerHTML = AGENTS.map(agent => {
+    const taken    = usedIds.includes(agent.id) && slots[slotIdx]?.agentId !== agent.id;
+    const selected = slots[slotIdx]?.agentId === agent.id;
+    return `<div class="modal-item ${taken?'dim':''}" onclick="${taken?'':'pickAgent(\''+agent.id+'\')'}">
+      <div>
+        <div class="modal-item-name">${agent.name}</div>
+        <div class="modal-item-sub">${agent.role} · ${ARCHETYPE_STATS[agent.name].hp}HP · ${ARCHETYPE_STATS[agent.name].atk}ATK</div>
+      </div>
+      <span>${taken?'<span style="color:var(--muted);font-size:12px">In use</span>':selected?'<span class="modal-check">✓</span>':''}</span>
+    </div>`;
+  }).join('');
+  openModal('modal-agent');
+}
+
+function pickAgent(agentId) {
+  const agent = AGENTS.find(a=>a.id===agentId);
+  const next  = [...slots];
+  next[pickerSlot] = {
+    agentId,
+    agentName: agent.name,
+    agentRole: agent.role,
+    behavior:  next[pickerSlot]?.behavior || BEHAVIORS[0],
+    equippedSkills: [null, null],
+  };
+  slots = next;
+  closeModal('modal-agent');
+  renderLoadout();
+  renderDungeon();
+}
+
+function openBehaviorPicker(slotIdx) {
+  pickerSlot = slotIdx;
+  const current = slots[slotIdx]?.behavior;
+  document.getElementById('behavior-picker-sub').textContent = slots[slotIdx]?.agentName || '';
+  document.getElementById('behavior-picker-list').innerHTML = BEHAVIORS.map(b => `
+    <div class="modal-item" onclick="pickBehavior('${b}')">
+      <span class="modal-item-name">${b}</span>
+      ${current===b?'<span class="modal-check">✓</span>':''}
+    </div>`).join('');
+  openModal('modal-behavior');
+}
+
+function pickBehavior(behavior) {
+  const next = [...slots];
+  next[pickerSlot] = { ...next[pickerSlot], behavior };
+  slots = next;
+  closeModal('modal-behavior');
+  renderLoadout();
+}
+
+function openSkillPicker(slotIdx, skillIdx) {
+  pickerSkillSlot = { slotIdx, skillIdx };
+  const slot = slots[slotIdx];
+  const pool = SKILL_POOL[slot.agentName]?.unlockable || [];
+  const otherEq = (slot.equippedSkills || [])[skillIdx===0?1:0]?.id;
+  const currentEq = (slot.equippedSkills || [])[skillIdx]?.id;
+
+  document.getElementById('skill-picker-sub').textContent = `${slot.agentName} — Slot ${skillIdx+1}`;
+  document.getElementById('skill-picker-list').innerHTML = pool.map(sk => {
+    const isOther  = sk.id === otherEq;
+    const isPassive= sk.category === 'Passive';
+    const isActive = sk.id === currentEq;
+    const dim = isOther || isPassive;
+    return `<div class="modal-item col ${dim?'dim':''}" onclick="${dim?'':'pickSkill(\''+sk.id+'\')'}">
+      <div style="display:flex;align-items:center;width:100%;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="cat-badge">${sk.category}</span>
+          <span class="modal-item-name">${sk.name}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="cd-text">CD ${sk.cooldown}</span>
+          ${isActive?'<span class="modal-check">✓</span>':''}
+          ${isOther?'<span style="color:var(--muted);font-size:12px">In use</span>':''}
+          ${isPassive?'<span style="color:var(--muted);font-size:12px">Auto</span>':''}
+        </div>
+      </div>
+      <div class="modal-item-sub" style="margin-top:4px">${sk.effect}</div>
+    </div>`;
+  }).join('');
+  openModal('modal-skill');
+}
+
+function pickSkill(skillId) {
+  const { slotIdx, skillIdx } = pickerSkillSlot;
+  const slot = slots[slotIdx];
+  const pool = SKILL_POOL[slot.agentName]?.unlockable || [];
+  const skill = pool.find(s=>s.id===skillId);
+  if (!skill) return;
+  const next = [...slots];
+  const equipped = [...(next[slotIdx].equippedSkills || [null,null])];
+  equipped[skillIdx] = skill;
+  next[slotIdx] = { ...next[slotIdx], equippedSkills: equipped };
+  slots = next;
+  closeModal('modal-skill');
+  renderLoadout();
+}
+
+function clearSkill(slotIdx, skillIdx) {
+  const next = [...slots];
+  const equipped = [...(next[slotIdx].equippedSkills || [null,null])];
+  equipped[skillIdx] = null;
+  next[slotIdx] = { ...next[slotIdx], equippedSkills: equipped };
+  slots = next;
+  renderLoadout();
+}
+
+function removeSlot(i) {
+  const next = [...slots];
+  next[i] = null;
+  slots = next;
+  renderLoadout();
+  renderDungeon();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  TAB + MODAL ROUTING
+// ══════════════════════════════════════════════════════════════════════
+
+function showTab(tab) {
+  // If leaving dungeon that was started from map, clean up
+  if (currentTab === 'dungeon' && mapDungeonActive && tab !== 'dungeon') {
+    mapDungeonActive = false;
+    resumeSpread();
+  }
+
+  currentTab = tab;
+  ['map','loadout','dungeon','battle'].forEach(t => {
+    document.getElementById('screen-'+t).classList.toggle('hidden', t!==tab);
+  });
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', ['map','loadout','dungeon','battle'][i] === tab);
+  });
+
+  if (tab === 'map')     renderMap();
+  if (tab === 'loadout') renderLoadout();
+  if (tab === 'dungeon') renderDungeon();
+  if (tab === 'battle')  { battleState = null; renderBattle(); }
+}
+
+function openModal(id)  { document.getElementById(id).classList.remove('hidden'); }
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// ══════════════════════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════════════════════
+
+renderMap();
+renderLoadout();
+renderDungeon();
+startSpreadTimer();
+</script>
+</body>
+</html>

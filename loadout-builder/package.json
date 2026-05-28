@@ -1,7 +1,7 @@
 {
   "name": "loadout-builder",
   "version": "1.0.0",
-  "main": "App.js",
+  "main": "expo/AppEntry",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -9,7 +9,10 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "expo": "~54.0.0"
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~54.0.0",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

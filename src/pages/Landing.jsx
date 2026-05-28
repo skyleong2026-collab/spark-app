@@ -8,7 +8,7 @@ export default function Landing() {
 
   function handleRetake() {
     clearAll()
-    navigate('/assessment/hand')
+    navigate('/assessment/heart')
   }
 
   return (
@@ -18,7 +18,7 @@ export default function Landing() {
         <p style={{ fontSize: 16, color: '#5f5e5a', lineHeight: 1.7, marginBottom: '2rem' }}>
           Discover how your heart, head, and hands work together — in 10 minutes.
         </p>
-        <Link to="/assessment/hand" style={{
+        <Link to="/assessment/heart" style={{
           display: 'inline-block', padding: '14px 32px', background: '#1a1a18', color: '#fff',
           borderRadius: 8, fontSize: 15, fontWeight: 500, textDecoration: 'none',
         }}>

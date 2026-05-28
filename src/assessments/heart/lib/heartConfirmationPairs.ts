@@ -1,130 +1,80 @@
+// HEART Confirmation Pairs — v2 (LOCKED 2026-05-19)
+// 4 active pairs: same-stance, fires on thin center margin.
+// Retired pairs (1|8, 2|3, 5|6, 2|9): Stage 1 now handles cross-stance ambiguity.
+// Trigger B (opt-in) deferred to Heart v2.1.
+
 import type { ConfusablePair, ConfirmationPairEntry } from './heartTypes';
 
-// HEART CONFIRMATION — TIER A (shipped, v2.0 + v2.1)
-// Tier B confirmation pairs: DEFERRED to Heart v2.2
-// Do not implement without explicit Jon sign-off and content from Instance 1.
-// See SPARK Master Prompt → Heart Assessment v2 Content Package for scope.
-
 export const CONFIRMATION_PAIRS: Record<ConfusablePair, ConfirmationPairEntry> = {
+  // PAIR 1|6 — Dependent: Body vs Head
   '1|6': {
-    patternA: {
+    stem: "Something you decided didn't work out the way you expected. When you go back over it, what does the revisiting mostly involve?",
+    optionA: {
       type: 1,
-      description: "You hold yourself to a clear internal standard and feel the weight of it most of the time. When something falls short — your own work, someone else's behavior, a situation — you feel the gap sharply and can't quite let it go. Criticism lands hard because it confirms what you were already worried about. You often suppress irritation because expressing it feels unrefined, but it leaks out in tone or precision. You respect people who do things the right way.",
+      text: "There's a difference in your mind between the reasoning being wrong and the outcome being wrong. You're going back to find out which it is — not to manage the fallout, but because that distinction actually matters to you. If what you decided was genuinely correct and it still didn't work, you can put it down. If the reasoning was off, that's what stays — not the consequence of it, but the fact of it.",
     },
-    patternB: {
+    optionB: {
       type: 6,
-      description: "You track what could go wrong and mentally rehearse responses to it. Your loyalty to people and systems runs deep, but it's paired with ongoing evaluation — can I actually trust this? You notice inconsistencies in authority figures quickly. Under stress, you either prepare more intensely or push back directly against what you're questioning. You respect people who've proven themselves reliable over time.",
+      text: "You're less focused on whether the conclusion was right than on whether you had enough to go on. The thing that's hard to put down isn't being wrong — it's the possibility that you moved on insufficient ground, without the input or checks that would have caught what you couldn't see alone. If you had solid basis and still missed it, that's something you can accept. What's harder is the question of whether the basis was there at all.",
+    },
+    resultCopy: {
+      shared: "Both Type 1 and Type 6 share a Dependent orientation — the way you look outside yourself to check your position.",
+      forA: "What distinguished the read was that you're more concerned with whether the reasoning itself was sound than with whether you had adequate support around you.",
+      forB: "What distinguished the read was that you're more concerned with whether you had enough to go on — solid enough ground, adequate input — than with whether the conclusion itself was logically correct.",
     },
   },
-  '2|9': {
-    patternA: {
-      type: 2,
-      description: "You're highly attuned to what other people need, often before they've named it themselves. Your sense of worth is bound up in being helpful, warm, and wanted — and you feel it sharply when that role isn't recognized. You have needs of your own, but you often don't notice them clearly until they've built up. Saying no feels like a betrayal of who you are. When you feel unappreciated, you can become resentful or hurt in ways that surprise the people around you.",
-    },
-    patternB: {
-      type: 9,
-      description: "You adapt to what's happening around you almost automatically, often merging with other people's agendas before you've checked whether you want to. You have opinions and preferences, but they can be hard to locate in real time — they surface later, or under pressure. You avoid conflict not because you fear it exactly, but because engaging it feels like it would cost more energy than you have. Others often experience you as easygoing, then are surprised by how stubborn you become when pushed.",
-    },
-  },
+
+  // PAIR 3|7 — Assertive: Heart vs Head
   '3|7': {
-    patternA: {
+    stem: "Something significant in your life just finished — a project, a role, a period you were deeply in. It went well. When you notice how you're sitting with it being over, what's most accurate?",
+    optionA: {
       type: 3,
-      description: "You move toward goals with focus and efficiency, adjusting your presentation to match what the situation requires. Success isn't optional for you — it's load-bearing. You're skilled at reading what's valued in a given environment and becoming that. Underneath the performance, there's often a harder question you don't want to sit with: who are you when you're not achieving. You feel most uneasy when there's nothing to produce.",
+      text: "There's a moment where it lands — where you can feel that you showed up the way you needed to, that the thing holds up. That moment is real and it matters. But it doesn't stay open long, and what follows it is a particular kind of unsteadiness — not grief, not restlessness exactly, but something closer to being unlocated. While you were in it, you knew what you were; the role made that legible. In the gap after, before something else has started, that clarity goes quiet in a way that's hard to just wait through.",
     },
-    patternB: {
+    optionB: {
       type: 7,
-      description: "You move toward possibilities with energy and optimism, keeping options open and staying in motion. You're skilled at reframing — finding the interesting angle, the upside, the next thing. Sitting with pain, limitation, or boredom feels unbearable in a way that's hard to explain. You keep generating new plans partly because the generating itself is what keeps you okay. The deeper fear is that if you stopped moving, something would catch up with you.",
+      text: "There's something that happens at the end of something good that you've learned to recognize — a particular kind of closing. Not loss of the thing itself, but something more specific: the possibilities that were still alive inside it are now resolved. While you were in it, the future inside that context was still open — multiple directions still possible, the story not yet written. Completion collapses that. What you notice yourself doing almost immediately is tracking what hasn't closed yet, what's still in motion somewhere ahead — not to escape what just ended, but because the forward possibility is where the energy actually runs.",
+    },
+    resultCopy: {
+      shared: "Both Type 3 and Type 7 share an Assertive orientation — moving forward, maintaining momentum.",
+      forA: "What distinguished the read was how completion lands: for you, finishing something removes a structure that made you legible to yourself, which creates a particular kind of pull toward what comes next.",
+      forB: "What distinguished the read was that completion collapses possibility rather than removing a role — you're tracking what's still open ahead, not because you're avoiding what finished, but because that forward horizon is where energy actually runs.",
     },
   },
+
+  // PAIR 4|5 — Withdrawn: Heart vs Head
   '4|5': {
-    patternA: {
+    stem: "Something significant happened — a conversation, a loss, an encounter that carried real weight. Some time has passed. You've had space to sit with it. What does the process of settling into it actually look like?",
+    optionA: {
       type: 4,
-      description: "Your internal emotional world is vivid and often feels more real than the external one. You're aware of being different from others in a way that's both painful and defining — you don't want to lose it, even when it isolates you. You notice what's missing more easily than what's present. Longing is a familiar state. You can be fully engaged one moment and pulled away by an internal shift the next, and you often don't know why.",
+      text: "Settling isn't really about understanding what happened. It's about whether it landed at the depth it deserved — whether you were actually there for it, whether you let it mean what it meant without managing it into something more acceptable. What keeps it unresolved isn't confusion about the facts. It's a sense that something important didn't fully get met — either by the situation, or by the other person, or by you. When it does settle, it's because the experience finally feels real in the way significant things should feel real — not managed into something more acceptable, not explained into something more comfortable. Still there, but its own weight.",
     },
-    patternB: {
+    optionB: {
       type: 5,
-      description: "You protect your time, energy, and internal space carefully, and you feel it when something is being asked of you that you haven't agreed to. You'd rather observe than participate until you understand what's happening. Your competence is real but private — you don't like being watched while you figure things out. Emotional demands feel especially depleting. You'd rather engage with a complex idea than a complex feeling.",
+      text: "Settling is something like when it can finally stay in view without effort. Not because the emotion is gone — but because the experience no longer feels structurally open. Something that was loose and requiring ongoing attention has found a place, and you can sense it holding. While it's still open, there's a particular kind of incompleteness: something about it doesn't yet have a place, or the picture isn't whole, or there's a piece you haven't quite seen yet. When the frame comes — when you can place it, understand what kind of thing it was, see how it fits — something releases. It doesn't have to stop mattering. It just has to make sense enough to be held without the ongoing effort of keeping it in view.",
+    },
+    resultCopy: {
+      shared: "Both Type 4 and Type 5 share a Withdrawn orientation — turning inward, processing internally.",
+      forA: "What distinguished the read was that settling requires the experience to land at its actual depth, not just to be placed and understood.",
+      forB: "What distinguished the read was that settling is about structural completion — when the experience has a frame, makes sense, can be held without ongoing effort.",
     },
   },
+
+  // PAIR 4|9 — Withdrawn: Heart vs Body
   '4|9': {
-    patternA: {
+    stem: "You've been around people for an extended stretch — a trip, a gathering, a period with more sustained contact than usual. You're finally alone. What's most accurate about what the solitude is doing?",
+    optionA: {
       type: 4,
-      description: "You feel a specific kind of longing — for something lost, or something never quite found. Your emotional intensity is part of your identity, not just a weather pattern. You're drawn to depth, authenticity, and what's hidden. You resist being ordinary even when ordinary would be easier. When you feel unseen, it registers as an identity injury, not just a social frustration.",
+      text: "What you're recovering is something like precision. Not energy — the issue isn't exhaustion. It's that in sustained company, your experience gradually loses its exact shape. Things that register one way for you get absorbed into shared versions — you respond to the room, to what's being felt collectively, to what the moment calls for — and somewhere in that, what was specifically yours becomes harder to locate. The solitude gives it back. Not by doing anything, but by removing the pressure that was flattening it. What returns is something more precise than energy — the way things actually land for you, in their particular weight, before time with other people had blurred the edges of it.",
     },
-    patternB: {
+    optionB: {
       type: 9,
-      description: "You feel a diffuse low-grade discomfort when things are in conflict or when your life feels pulled in too many directions. You're not reaching for something specific — you're trying to maintain an internal peace that gets disturbed by too much demand. You can lose hours or days to low-priority activity that feels restful but isn't actually restorative. When you feel pressured, you go quieter, slower, and more absent rather than more intense.",
+      text: "What registers first is the absence of pull. Extended time with people — even easy, good time — accumulates a low-level demand: something is always requiring a response, an orientation, a small continual expenditure of attention. You're not usually aware of it while it's happening. But alone, it starts to lift, and you can feel it going. What you're moving toward isn't a particular state. It's the place where nothing requires your attention in that particular way. When you get there — and you can tell when you do — it's not because something arrived. It's because the effort of continual small orientation finally stopped.",
     },
-  },
-  '5|6': {
-    patternA: {
-      type: 5,
-      description: "You think carefully, systematically, and often alone. You want to understand something thoroughly before you commit to a position on it. You conserve your engagement — not because you're unwilling, but because you're aware of how quickly your resources get used up. Expertise and competence matter to you. You'd rather withhold an opinion than hold an imprecise one.",
-    },
-    patternB: {
-      type: 6,
-      description: "You think in scenarios and contingencies, running through what-if's as a way of preparing. Your trust in people, systems, and your own judgment is something you keep evaluating — it doesn't just settle into place. You notice inconsistencies, risks, and hidden motives faster than most. Under stress you either prepare more (which feels like control) or push back sharply against what you're suspicious of. Reassurance doesn't quite land.",
-    },
-  },
-  '1|8': {
-    patternA: {
-      type: 1,
-      description: "You feel anger often but express it rarely and carefully. You hold yourself to a standard that doesn't permit reactive outbursts. The anger comes out in precision, in tone, in tightness — and occasionally in a burst you feel ashamed of afterward. You're working with an internal critic that doesn't let you off the hook. Being seen as losing control is worse than almost anything.",
-    },
-    patternB: {
-      type: 8,
-      description: "You express anger directly and don't spend much time apologizing for it. You feel your strength and use it to protect yourself and people you consider yours. You don't worry about being too much — you worry about being vulnerable to people who haven't earned your trust. Softness is available to you but not offered easily. You'd rather be respected than liked.",
-    },
-  },
-  '2|3': {
-    patternA: {
-      type: 2,
-      description: "Your worth feels bound up in what you give to others. You track people's emotional states closely and adjust your warmth, attention, and support to match. When your contribution isn't acknowledged, it registers as a wound about being unlovable, not just as a workplace slight. You can have trouble naming what you need, especially to the people you most want to be close to.",
-    },
-    patternB: {
-      type: 3,
-      description: "Your worth feels bound up in what you accomplish and how you're seen. You track what's valued in a given environment and shape yourself toward it with real skill. When your performance falters, it registers as a threat to identity, not just to outcomes. You can have trouble knowing what you want separate from what would be successful to want.",
-    },
-  },
-  // v2.1 expanded pairs
-  '2|6': {
-    patternA: {
-      type: 2,
-      description: "You move toward people to help them. You notice what they need — emotionally, practically — often before they ask, and positioning yourself as the person who provides it feels natural and right. You can articulate your own needs if pressed, but they tend to surface later, after you've already met someone else's. Relationships feel most stable when you're actively giving into them. When you're depleted, you may feel unappreciated — the giving you've done wasn't fully seen, and the recognition you didn't ask for didn't arrive. The pattern centers on being needed as the way you secure love.",
-    },
-    patternB: {
-      type: 6,
-      description: "You move toward people to test whether they can be relied on. You're loyal to the ones who've earned it, and you stay alert to whether the relationship is still trustworthy — even after the trust is established. You read people carefully before committing, and you run through what-ifs about what might go wrong. Your attentiveness to others isn't primarily about providing for them; it's about staying oriented to whether the ground is solid. When you're depleted, you may feel exposed — the checking hasn't stopped, and reassurance helps only briefly. The pattern centers on testing reliability as the way you secure safety.",
-    },
-  },
-  '3|8': {
-    patternA: {
-      type: 3,
-      description: "You drive toward achievement that others can see. You adapt your presentation to what each context rewards — different settings call for different versions of you, and shifting between them happens smoothly, often without conscious decision. Success feels like the ground your identity stands on; falling short feels like exposure of something underneath that you'd rather not examine. You read what a context values and deliver it, and the recognition you receive confirms you're on track. When someone challenges your performance, the sting is sharper than you let on. The pattern centers on visible success as the confirmation of worth.",
-    },
-    patternB: {
-      type: 8,
-      description: "You drive toward maintaining control and protecting what's yours. You don't adapt your presentation much — people get what they get, and if they don't like it, that's information about them, not a reason for you to change. Autonomy feels non-negotiable; being pushed around by someone who hasn't earned authority over you triggers immediate resistance. You'd rather be respected than liked, and softness in the wrong context reads to you as exposure. When someone challenges you directly, you often meet the challenge with more force, not less. The pattern centers on strength as the condition of not being exploited.",
-    },
-  },
-  '5|9': {
-    patternA: {
-      type: 5,
-      description: "You withdraw to protect your internal resources — time, mental bandwidth, the space to think without interruption. Demands from other people register as potential depletion before they register as anything else, and you ration your engagement carefully. Even when you're physically present, you may be keeping yourself gated, releasing only the responses you've fully worked out. Unstructured social time is specifically costly — not because you dislike people, but because the output required to sustain it pulls from exactly the reserves you're trying to conserve. When you've been with people too long, you feel drained in a way that requires solitude, not rest. The pattern centers on conservation.",
-    },
-    patternB: {
-      type: 9,
-      description: "You withdraw to maintain internal peace — an even inner weather that doesn't get disrupted by too many competing pulls. Demands from other people aren't primarily a resource cost; they're a potential source of conflict or fragmentation that pulls your attention in directions you didn't choose. You adapt to what's happening around you often before checking whether you want to, and your own preferences surface later — sometimes only when you're pushed. When you've been in high-engagement situations too long, you feel scattered rather than drained, and what restores you is something familiar and low-stakes, not necessarily solitude. The pattern centers on non-disruption.",
-    },
-  },
-  '7|9': {
-    patternA: {
-      type: 7,
-      description: "You deflect by generating what's next. When something uncomfortable surfaces, you reframe it into an opportunity, pivot to a new possibility, or keep the momentum going so you don't have to sit with it. You're usually in motion — mentally, conversationally, sometimes physically — and stillness feels like an invitation for something unwanted to catch up. Your enthusiasm is real, and it's also doing work: it keeps certain feelings from arriving. When someone tries to slow you down to a heavier conversation, you'll often find yourself already elsewhere by the time they finish the sentence. The pattern centers on forward motion as the way things stay okay.",
-    },
-    patternB: {
-      type: 9,
-      description: "You deflect by smoothing. When something uncomfortable surfaces, you downplay it, adapt to what the room needs, or let it fade rather than engaging with it head-on. You're usually steady — not moving fast, but not disrupting either — and conflict feels like the kind of disruption that fragments your internal peace. Your calm is real, and it's also doing work: it keeps you from the cost of taking a position that might create friction. When someone tries to push you to a clear preference or a harder stance, you'll often find yourself going along or going vague, and only later notice you didn't actually agree. The pattern centers on continuity as the way things stay okay.",
+    resultCopy: {
+      shared: "Both Type 4 and Type 9 share a Withdrawn orientation.",
+      forA: "What distinguished the read was that solitude recovers experiential precision — returning to the specific way things actually land for you before social absorption blurred the edges.",
+      forB: "What distinguished the read was that solitude releases orientational demand — the low-level pull that comes from sustained contact, finally lifting.",
     },
   },
 };

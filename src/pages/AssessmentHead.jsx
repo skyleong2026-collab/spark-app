@@ -1,9 +1,11 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAssessment } from '../context/AssessmentContext'
 import HeadAssessment from '../components/HeadAssessment'
 
 export default function AssessmentHead() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isolate = searchParams.get('isolate') === '1'
   const { setHeadType, setHeadResult, heartResult } = useAssessment()
 
   const scenarioContext = heartResult?.scenarioContext || null
@@ -11,7 +13,9 @@ export default function AssessmentHead() {
   function handleComplete(result) {
     setHeadType(result.resultType)
     setHeadResult(result)
-    navigate('/assessment/hand')
+    if (!isolate) {
+      navigate('/assessment/hand')
+    }
   }
 
   return (

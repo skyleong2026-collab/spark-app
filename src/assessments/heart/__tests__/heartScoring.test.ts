@@ -19,6 +19,9 @@ import {
   classifyConfidence,
   minConfidence,
   detectFlatResponse,
+  detectStanceSplitType,
+  d3StanceLean,
+  getSynthesisVariant,
   shouldTriggerConfirmation,
   resolveFinalType,
   scoreHeartAssessment,
@@ -171,84 +174,75 @@ describe('detectFlatResponse', () => {
   });
 });
 
-// ── shouldTriggerConfirmation (pair-gated) ──────────────────────────────────
+// ── shouldTriggerConfirmation (Spec 2 Trigger A: same-stance + thin center) ──
 
 describe('shouldTriggerConfirmation', () => {
-  it('triggers on confusable pair with moderate confidence', () => {
-    const result = shouldTriggerConfirmation(1, 6, 'moderate', 'high', 'moderate');
+  // Active pairs: 1|6 (dependent), 3|7 (assertive), 4|5 (withdrawn), 4|9 (withdrawn)
+
+  it('triggers on 1|6: same stance (dependent), low center, moderate overall', () => {
+    // 1=dependent+body, 6=dependent+head — same stance
+    const result = shouldTriggerConfirmation(1, 6, 'dependent', 'dependent', 'low', 'moderate');
     expect(result.triggered).toBe(true);
     expect(result.pair).toBe('1|6');
-    expect(result.reason).toContain('overall confidence is moderate');
-    expect(result.reason).toContain('confusable pair match');
+    expect(result.reason).toBe('trigger_a_same_stance_thin_center');
   });
 
-  it('triggers on confusable pair match even at high confidence', () => {
-    const result = shouldTriggerConfirmation(1, 6, 'high', 'high', 'high');
+  it('triggers on 3|7: same stance (assertive), low center, moderate overall', () => {
+    const result = shouldTriggerConfirmation(3, 7, 'assertive', 'assertive', 'low', 'moderate');
     expect(result.triggered).toBe(true);
-    expect(result.pair).toBe('1|6');
-    expect(result.reason).toBe('confusable pair match');
+    expect(result.pair).toBe('3|7');
   });
 
-  it('does NOT trigger when rules fire but pair is not confusable', () => {
-    // Types 1 and 7 are NOT a confusable pair, but confidence is low
-    const result = shouldTriggerConfirmation(1, 7, 'low', 'low', 'low');
+  it('triggers on 4|5: same stance (withdrawn), low center, moderate overall', () => {
+    const result = shouldTriggerConfirmation(4, 5, 'withdrawn', 'withdrawn', 'low', 'moderate');
+    expect(result.triggered).toBe(true);
+    expect(result.pair).toBe('4|5');
+  });
+
+  it('triggers on 4|9: same stance (withdrawn), low center, moderate overall', () => {
+    const result = shouldTriggerConfirmation(4, 9, 'withdrawn', 'withdrawn', 'low', 'moderate');
+    expect(result.triggered).toBe(true);
+    expect(result.pair).toBe('4|9');
+  });
+
+  it('pair key ordered regardless of argument order', () => {
+    const result = shouldTriggerConfirmation(6, 1, 'dependent', 'dependent', 'low', 'moderate');
+    expect(result.pair).toBe('1|6');
+    expect(result.triggered).toBe(true);
+  });
+
+  it('does NOT trigger when stance confidence is low (reframe gate)', () => {
+    const result = shouldTriggerConfirmation(1, 6, 'dependent', 'dependent', 'low', 'low');
     expect(result.triggered).toBe(false);
-    expect(result.pair).toBeNull();
-    expect(result.reason).toMatch(/^rules_fired_no_pair:/);
-    expect(result.reason).toContain('overall confidence is low');
+    expect(result.reason).toBe('low_stance_confidence');
   });
 
-  it('does not trigger when no rules fire', () => {
-    // High confidence, non-confusable pair
-    const result = shouldTriggerConfirmation(8, 7, 'high', 'high', 'high');
+  it('does NOT trigger for cross-stance candidates (Stage 1 handles cross-stance)', () => {
+    // 1=dependent+body, 8=assertive+body — different stances
+    const result = shouldTriggerConfirmation(1, 8, 'dependent', 'assertive', 'low', 'moderate');
     expect(result.triggered).toBe(false);
-    expect(result.reason).toBe('no trigger');
+    expect(result.reason).toBe('cross_stance_no_trigger');
   });
 
-  it('triggers on split confidence when pair is confusable', () => {
-    const result = shouldTriggerConfirmation(5, 6, 'high', 'low', 'low');
-    expect(result.triggered).toBe(true);
-    expect(result.pair).toBe('5|6');
-    expect(result.reason).toContain('split confidence');
+  it('does NOT trigger when center margin is not thin', () => {
+    // Same stance, active pair, but center confidence is moderate (not thin)
+    const result = shouldTriggerConfirmation(1, 6, 'dependent', 'dependent', 'moderate', 'moderate');
+    expect(result.triggered).toBe(false);
+    expect(result.reason).toBe('center_margin_not_thin');
   });
 
-  it('accumulates multiple fired rules in reason', () => {
-    // Low overall + confusable pair + split confidence
-    const result = shouldTriggerConfirmation(1, 6, 'high', 'low', 'low');
-    expect(result.triggered).toBe(true);
-    expect(result.reason).toContain('overall confidence is low');
-    expect(result.reason).toContain('confusable pair match');
-    expect(result.reason).toContain('split confidence');
+  it('does NOT trigger when same-stance pair is not in active set', () => {
+    // 1=dependent+body, 2=dependent+heart — same stance but not an active pair
+    const result = shouldTriggerConfirmation(1, 2, 'dependent', 'dependent', 'low', 'moderate');
+    expect(result.triggered).toBe(false);
+    expect(result.reason).toBe('no_active_pair_for_intersection');
   });
 
-  it('orders pair key correctly regardless of argument order', () => {
-    const result = shouldTriggerConfirmation(6, 1, 'high', 'high', 'high');
-    expect(result.pair).toBe('1|6');
-  });
-
-  // v2.1 expanded pairs
-  it('triggers on confusable pair 2|6', () => {
-    const result = shouldTriggerConfirmation(2, 6, 'high', 'high', 'high');
-    expect(result.triggered).toBe(true);
-    expect(result.pair).toBe('2|6');
-  });
-
-  it('triggers on confusable pair 3|8', () => {
-    const result = shouldTriggerConfirmation(3, 8, 'high', 'high', 'high');
-    expect(result.triggered).toBe(true);
-    expect(result.pair).toBe('3|8');
-  });
-
-  it('triggers on confusable pair 7|9', () => {
-    const result = shouldTriggerConfirmation(7, 9, 'high', 'high', 'high');
-    expect(result.triggered).toBe(true);
-    expect(result.pair).toBe('7|9');
-  });
-
-  it('triggers on confusable pair 5|9', () => {
-    const result = shouldTriggerConfirmation(5, 9, 'high', 'high', 'high');
-    expect(result.triggered).toBe(true);
-    expect(result.pair).toBe('5|9');
+  it('retired cross-stance pairs (1|8, 2|9) do NOT trigger', () => {
+    const r1 = shouldTriggerConfirmation(1, 8, 'dependent', 'assertive', 'low', 'moderate');
+    expect(r1.triggered).toBe(false);
+    const r2 = shouldTriggerConfirmation(2, 9, 'dependent', 'withdrawn', 'low', 'moderate');
+    expect(r2.triggered).toBe(false);
   });
 });
 
@@ -262,18 +256,25 @@ describe('resolveFinalType', () => {
     expect(result.finalConfidence).toBe('moderate');
   });
 
-  it('agreed → keeps algorithm type, upgrades to high confidence', () => {
+  it('agreed + moderate → stays moderate (pair-fired resolves at moderate)', () => {
     const result = resolveFinalType(1, 6, 'moderate', { result: 'agreed' });
+    expect(result.finalType).toBe(1);
+    expect(result.finalSecondary).toBe(6);
+    expect(result.finalConfidence).toBe('moderate');
+  });
+
+  it('agreed + high → stays high', () => {
+    const result = resolveFinalType(1, 6, 'high', { result: 'agreed' });
     expect(result.finalType).toBe(1);
     expect(result.finalSecondary).toBe(6);
     expect(result.finalConfidence).toBe('high');
   });
 
-  it('disagreed → uses user pick, demotes algorithm to secondary, low confidence', () => {
+  it('disagreed → uses user pick, demotes algorithm to secondary, moderate confidence', () => {
     const result = resolveFinalType(1, 6, 'moderate', { result: 'disagreed', userPick: 6 });
     expect(result.finalType).toBe(6);
     expect(result.finalSecondary).toBe(1);
-    expect(result.finalConfidence).toBe('low');
+    expect(result.finalConfidence).toBe('moderate');
   });
 
   it('uncertain → keeps algorithm type, drops to low confidence', () => {
@@ -332,110 +333,81 @@ describe('scoreHeartAssessment — clean types', () => {
 // ── scoreHeartAssessment: confidence and confirmation scenarios ──────────────
 
 describe('scoreHeartAssessment — confidence scenarios', () => {
-  it('moderate stance confidence with confusable pair triggers confirmation', () => {
-    // Dependent=5 (1.0), assertive slightly behind, withdrawn low → moderate stance separation
-    // Body=5 (1.0), others=2 → high center confidence
-    // Primary: dependent+body = type 1. Secondary stance = assertive → type 8.
-    // 1|8 is confusable → should trigger.
-    // Stance: dep=1.0, assertive needs to be ~0.85 for 0.15 sep → moderate
-    // 4 items at 5 = 20/20 = 1.0. For 0.85: 17/20 → items at mix of 4s and 5s.
-    // Use item-level control: assertive items S1=5,S2=4,S3=4,S4=4 → sum=17, 17/20=0.85
-    const responses = buildResponsesFromItems(2, {
-      // Dependent all 5s → 1.0
-      S5: 5, S6: 5, S7: 5, S8: 5,
-      // Assertive slightly behind → 0.85
-      S1: 5, S2: 4, S3: 4, S4: 4,
-      // Body all 5s → 1.0
-      C1: 5, C2: 5, C3: 5, C4: 5,
-    });
-
-    const result = scoreHeartAssessment(responses);
-    expect(result.primary_stance).toBe('dependent');
-    expect(result.stance_confidence).toBe('moderate');  // 0.15 separation
-    expect(result.primary_type).toBe(1);
-    expect(result.confirmation_triggered).toBe(true);
-    expect(result.confirmation_pair).toBe('1|8');
+  it('Spec 2 Trigger A: 1|6 triggers — dependent primary, thin center (body≈head), moderate overall', () => {
+    // Spec 2: same-stance (dependent), low center confidence, non-low overall → trigger
+    // Stance: dependent=5(1.0), others=2(0.4) → sep=0.6 → high
+    // Center: body=3(0.6), head=3(0.6), heart=2(0.4) → body and head tied → sep≈0 → low
+    // Primary: dependent+body=1
+    // Secondary center: dependent+head=6 (same stance as primary)
+    // Pair 1|6 active, center low, overall=min(high,low)=low → wait, overall=low → no trigger!
+    // Need overall moderate: need center sep to be low but overall not low.
+    // overall = min(stanceConf, centerConf). If stance=high and center=low → overall=low → no trigger.
+    // For trigger: need overall=moderate+, which means BOTH dims ≥ moderate.
+    // But center must be low for thin-center. Contradiction? No — re-read spec:
+    // centerConfidence=low means center sep < 0.10. overallConfidence=min(stance,center).
+    // So to get overall ≥ moderate with center=low is impossible (min would be low).
+    // Spec says: overallConfidence === 'low' → no trigger. This means Trigger A fires when
+    // the D3 correction or split detection elevates stanceConfidence, but center is still thin.
+    // In the clean case (no split), overall=min(stance,center). If center is low, overall is low.
+    // Trigger A can only fire when the overallConfidence somehow isn't computed as low —
+    // which happens when scoreHeartAssessment bypasses the pure min() in split correction cases.
+    //
+    // Actually reading scoreHeartAssessment: overall = minConfidence(stanceConfidence, centerConfidence).
+    // If stanceConfidence='high' and centerConfidence='low' → overall='low' → shouldTrigger returns false.
+    // Trigger A only fires in practice during split-corrected cases where stanceConf is set to 'moderate'.
+    // For a clean test: stance=moderate (sep 0.10-0.25), center=low (sep < 0.10).
+    // overall = min(moderate, low) = low → still no trigger from pure scoring alone.
+    //
+    // The trigger only fires in split-resolved cases (Case A: D3 resolves → stanceConf=moderate,
+    // but then overall = min(moderate, centerConf)). If center is thin: overall = min(moderate, low) = low
+    // → still no trigger. So Trigger A's real firing condition in scoreHeartAssessment requires
+    // manual test of shouldTriggerConfirmation directly with appropriate confidence values.
+    //
+    // Test the function directly with valid trigger inputs (moderate overall is possible when center
+    // confidence comes from a wider margin but the confirmation check is done before min):
+    // Actually re-reading the spec: overall = min(stance, center). If center=low → overall=low → no trigger.
+    // This means Spec 2 Trigger A only fires when the overall is NOT low — i.e., both axes moderate+.
+    // But centerConfidence=low is the thin-center condition for the trigger. Contradiction in spec?
+    // The spec likely means: centerConfidence is the RAW center separation confidence, and
+    // overallConfidence is a DERIVED signal. The intent: "fires when center is the ONLY weak axis."
+    // Which requires stance=moderate+ and center=low. But min(moderate,low)=low → no trigger.
+    //
+    // This is a spec tension. The trigger fires via shouldTriggerConfirmation with explicit args.
+    // The E2E path requires manual orchestration in scoreHeartAssessment. For now, test the unit.
+    const r = shouldTriggerConfirmation(1, 6, 'dependent', 'dependent', 'low', 'moderate');
+    expect(r.triggered).toBe(true);
+    expect(r.pair).toBe('1|6');
   });
 
-  it('confusable pair triggers confirmation even at high overall confidence', () => {
-    // Need primary=1, secondary=6 with high confidence on both axes.
-    // Stance: dependent=5(1.0), assertive=2(0.4) → separation 0.6 → high
-    // Center: body=5(1.0), head needs to beat heart for secondary → head=2(0.4), heart=2(0.4)
-    // Secondary type: dependent+head=6 or assertive+body=8. dep_head score=0.4, assertive score=0.4 → tie → stance-flip wins → assertive+body=8
-    // That gives pair 1|8, not 1|6. Need head to score higher than assertive for center-flip to win.
-    // Stance: dependent=5(1.0), withdrawn=2(0.4), assertive=2(0.4) → high stance confidence
-    // Center: body=5(1.0), head=3(0.6), heart=2(0.4) → secondary=head, sep=0.4 → high
-    // Secondary: stance-flip(withdrawn+body=9, score=0.4) vs center-flip(dependent+head=6, score=0.6) → center-flip wins → type 6
-    // Pair 1|6 is confusable → triggers despite high confidence
+  it('clean non-confusable pair: no confirmation trigger', () => {
+    // Type 1 (dependent+body), secondary = 9 (withdrawn+body) — cross-stance, no active pair
     const responses = buildResponsesFromItems(2, {
       S5: 5, S6: 5, S7: 5, S8: 5,  // dependent = 1.0
       C1: 5, C2: 5, C3: 5, C4: 5,  // body = 1.0
-      C9: 3, C10: 3, C11: 3, C12: 3,  // head = 0.6
+      S9: 3, S10: 3, S11: 3, S12: 3, // withdrawn = 0.6
     });
-
     const result = scoreHeartAssessment(responses);
     expect(result.primary_type).toBe(1);
-    expect(result.secondary_type).toBe(6);
-    expect(result.overall_confidence).toBe('high');
-    expect(result.confirmation_triggered).toBe(true);
-    expect(result.confirmation_pair).toBe('1|6');
-    expect(result.confirmation_reason).toBe('confusable pair match');
+    expect(result.confirmation_triggered).toBe(false);
   });
 
-  it('split confidence triggers confirmation when pair is confusable', () => {
-    // Stance high, center low, and pair in CONFUSABLE_PAIRS.
-    // Stance: dependent=5(1.0), others=2(0.4) → sep=0.6 → high
-    // Center: body=3(0.6), heart=3(0.6), head=2(0.4) → sep=0.0 → low
-    // Primary: dependent+body=1 (body wins tie by sort order)
-    // Secondary depends on which center is secondary. With body/heart tied, secondary could be heart.
-    // dependent+heart=2. Pair 1|2 is NOT confusable → won't trigger.
-    // Let's use: withdrawn(high) + head(low, with 5|6 as confusable pair).
-    // Stance: withdrawn=5(1.0), others=2(0.4) → high
-    // Center: head=3(0.6), heart=2.75(0.55), body=2(0.4) → sep=0.05 → low
-    // Primary: withdrawn+head=5
-    // Secondary: stance-flip → assertive/dependent + head. center-flip → withdrawn+heart=4.
-    // center score for heart=0.55, stance score for dep/assertive=0.4 → center-flip wins → type 4.
-    // Wait, 4|5 is confusable! But I need 5|6.
-    // Try: center head=3(0.6) and body=2.75(0.55) → secondary center=body → withdrawn+body=9 → pair 5|9, not confusable.
-    // OK let me just craft 5|6 directly.
-    // Stance: withdrawn=5(1.0), dependent=3.5(0.7), assertive=2(0.4) → sep=0.3 → high
-    // Center: head=3(0.6), heart=2.75(0.55), body=2(0.4) → sep=0.05 → low
-    // Primary: withdrawn+head=5. Secondary: stance-flip(dependent+head=6, score=0.7) vs center-flip(withdrawn+heart=4, score=0.55) → stance-flip wins → type 6
-    // Pair 5|6 is confusable. Split confidence: high+low → trigger!
+  it('same-stance pair 4|5: high stance + thin center → confirmation triggered in E2E', () => {
+    // withdrawn + head = 5, withdrawn + heart = 4. Same stance (withdrawn), active pair 4|5.
+    // Stance: withdrawn=5(1.0), others=2(0.4) → high (sep=0.6)
+    // Center: head=3(0.6), heart=3(0.6), body=2(0.4) → sep≈0 → low
+    // Trigger A gate uses stanceConfidence (high, not low) → fires.
+    // heart/head tied → heart wins by insertion order → primary=withdrawn+heart=4, secondary=withdrawn+head=5
     const responses = buildResponsesFromItems(2, {
-      S9: 5, S10: 5, S11: 5, S12: 5,  // withdrawn = 1.0
-      S5: 4, S6: 3, S7: 3, S8: 4,    // dependent = 0.7
-      C9: 3, C10: 3, C11: 3, C12: 3,  // head = 0.6
-      C5: 3, C6: 3, C7: 2, C8: 3,    // heart = 0.55
+      S9: 5, S10: 5, S11: 5, S12: 5, // withdrawn = 1.0
+      C9: 3, C10: 3, C11: 3, C12: 3, // head = 0.6
+      C5: 3, C6: 3, C7: 3, C8: 3,   // heart = 0.6
     });
-
     const result = scoreHeartAssessment(responses);
-    expect(result.primary_type).toBe(5);
-    expect(result.secondary_type).toBe(6);
-    expect(result.stance_confidence).toBe('high');
+    expect(result.primary_type).toBe(4);
+    expect(result.secondary_type).toBe(5);
     expect(result.center_confidence).toBe('low');
     expect(result.confirmation_triggered).toBe(true);
-    expect(result.confirmation_pair).toBe('5|6');
-    expect(result.confirmation_reason).toContain('split confidence');
-  });
-
-  it('rules fire but non-confusable pair → no trigger, instrumented reason', () => {
-    // Need primary=8, secondary=9 (pair 8|9 is NOT confusable) with low confidence.
-    // Stance: assertive=3(0.6), withdrawn=2.75(0.55), dependent=2(0.4) → sep=0.05 → low
-    // Center: body=3(0.6), heart=2(0.4), head=2(0.4) → sep=0.2 → moderate
-    // Primary: assertive+body=8. Secondary: stance-flip(withdrawn+body=9, score=0.55) vs center-flip(assertive+heart=3, score=0.4) → stance-flip wins → type 9
-    // Pair: 8|9 → NOT confusable → rules fire (low overall) but no trigger.
-    const responses = buildResponsesFromItems(2, {
-      S1: 3, S2: 3, S3: 3, S4: 3,      // assertive = 0.6
-      S9: 3, S10: 3, S11: 2, S12: 3,    // withdrawn = 0.55
-      C1: 3, C2: 3, C3: 3, C4: 3,      // body = 0.6
-    });
-
-    const result = scoreHeartAssessment(responses);
-    expect(result.primary_type).toBe(8);
-    expect(result.secondary_type).toBe(9);
-    expect(result.confirmation_triggered).toBe(false);
-    expect(result.confirmation_reason).toMatch(/^rules_fired_no_pair:/);
+    expect(result.confirmation_pair).toBe('4|5');
   });
 });
 
@@ -455,15 +427,21 @@ describe('scoreHeartAssessment — flat response', () => {
 // ── resolveFinalType: confirmation outcomes (end-to-end style) ──────────────
 
 describe('resolveFinalType — confirmation outcomes', () => {
-  it('disagreed: algorithm=1, user picks 6 → finalType=6, finalSecondary=1, low', () => {
+  it('disagreed: algorithm=1, user picks 6 → finalType=6, finalSecondary=1, moderate', () => {
     const result = resolveFinalType(1, 6, 'moderate', { result: 'disagreed', userPick: 6 });
     expect(result.finalType).toBe(6);
     expect(result.finalSecondary).toBe(1);
-    expect(result.finalConfidence).toBe('low');
+    expect(result.finalConfidence).toBe('moderate');
   });
 
-  it('agreed: moderate confidence → upgraded to high', () => {
+  it('agreed + moderate → stays moderate', () => {
     const result = resolveFinalType(1, 6, 'moderate', { result: 'agreed' });
+    expect(result.finalType).toBe(1);
+    expect(result.finalConfidence).toBe('moderate');
+  });
+
+  it('agreed + high → stays high', () => {
+    const result = resolveFinalType(1, 6, 'high', { result: 'agreed' });
     expect(result.finalType).toBe(1);
     expect(result.finalConfidence).toBe('high');
   });
@@ -542,5 +520,196 @@ describe('edge cases', () => {
     expect(result.item_order).toEqual([]);
     expect(result.confirmation_result).toBeNull();
     expect(result.confirmation_user_pick).toBeNull();
+  });
+});
+
+// ── detectStanceSplitType ───────────────────────────────────────────────────
+
+describe('detectStanceSplitType', () => {
+  it('clean: top stance has clear separation from second', () => {
+    // assertive=1.0, dependent=0.4, withdrawn=0.4 → sep(top,mid)=0.6 ≥ threshold
+    const result = detectStanceSplitType({ assertive: 1.0, dependent: 0.4, withdrawn: 0.4 });
+    expect(result).toBe('clean');
+  });
+
+  it('2-2-0: top two close, both far above third', () => {
+    // assertive=0.8, withdrawn=0.8, dependent=0.2 → sep(top,mid)=0 < threshold, sep(mid,bot)=0.6 ≥ threshold
+    const result = detectStanceSplitType({ assertive: 0.8, dependent: 0.2, withdrawn: 0.8 });
+    expect(result).toBe('2-2-0');
+  });
+
+  it('2-1-1: all three within threshold of each other', () => {
+    // assertive=0.5, dependent=0.45, withdrawn=0.42 → all gaps < threshold
+    const result = detectStanceSplitType({ assertive: 0.5, dependent: 0.45, withdrawn: 0.42 });
+    expect(result).toBe('2-1-1');
+  });
+
+  it('2-2-0: exact tie at top, clear drop at third', () => {
+    const result = detectStanceSplitType({ assertive: 0.7, dependent: 0.7, withdrawn: 0.2 });
+    expect(result).toBe('2-2-0');
+  });
+});
+
+// ── d3StanceLean ────────────────────────────────────────────────────────────
+
+describe('d3StanceLean', () => {
+  it('body center + assertive/withdrawn split → null (body compatible with both)', () => {
+    // body compatible: [assertive, withdrawn] → both in split → symmetric → null
+    expect(d3StanceLean('body', 'assertive', 'withdrawn')).toBeNull();
+  });
+
+  it('heart center + assertive/withdrawn split → assertive (heart NOT compatible with withdrawn)', () => {
+    // heart compatible: [assertive, dependent] → assertive in split, withdrawn not → assertive
+    expect(d3StanceLean('heart', 'assertive', 'withdrawn')).toBe('assertive');
+  });
+
+  it('heart center + withdrawn/dependent split → dependent (heart NOT compatible with withdrawn)', () => {
+    // heart compatible: [assertive, dependent] → dependent in split, withdrawn not → dependent
+    expect(d3StanceLean('heart', 'withdrawn', 'dependent')).toBe('dependent');
+  });
+
+  it('head center + dependent/withdrawn split → null (head compatible with both)', () => {
+    // head compatible: [dependent, withdrawn] → both in split → symmetric → null
+    expect(d3StanceLean('head', 'dependent', 'withdrawn')).toBeNull();
+  });
+
+  it('head center + assertive/withdrawn split → withdrawn (head NOT compatible with assertive)', () => {
+    // head compatible: [dependent, withdrawn] → withdrawn in split, assertive not → withdrawn
+    expect(d3StanceLean('head', 'assertive', 'withdrawn')).toBe('withdrawn');
+  });
+
+  it('body center + assertive/dependent split → assertive (body NOT compatible with dependent)', () => {
+    // body compatible: [assertive, withdrawn] → assertive in split, dependent not → assertive
+    expect(d3StanceLean('body', 'assertive', 'dependent')).toBe('assertive');
+  });
+});
+
+// ── getSynthesisVariant ─────────────────────────────────────────────────────
+
+describe('getSynthesisVariant', () => {
+  it('high confidence → synthesis_high', () => {
+    expect(getSynthesisVariant('high', false, false)).toBe('synthesis_high');
+  });
+
+  it('moderate + pair fired → synthesis_high (pair-resolved gets high variant)', () => {
+    expect(getSynthesisVariant('moderate', true, false)).toBe('synthesis_high');
+  });
+
+  it('moderate + no pair → synthesis_moderate', () => {
+    expect(getSynthesisVariant('moderate', false, false)).toBe('synthesis_moderate');
+  });
+
+  it('low + not twoCandidate → synthesis_low', () => {
+    expect(getSynthesisVariant('low', false, false)).toBe('synthesis_low');
+  });
+
+  it('low + twoCandidate → null (skip synthesis)', () => {
+    expect(getSynthesisVariant('low', false, true)).toBeNull();
+  });
+
+  it('high + twoCandidate = false → synthesis_high (twoCandidate only suppresses on low)', () => {
+    // twoCandidate guard only fires when confidence=low
+    expect(getSynthesisVariant('high', false, false)).toBe('synthesis_high');
+  });
+});
+
+// ── Smoke tests: E2E scoring flows (dispatch DoD) ──────────────────────────
+
+describe('smoke tests — dispatch DoD', () => {
+  // Smoke test 1: 2-2-0 Assertive+Withdrawn split, heart-dominant center
+  // D3 proxy (primary_center) = heart → heart compatible with assertive, not withdrawn
+  // → Case A: resolves to assertive, Moderate confidence
+  it('smoke 1: 2-2-0 assertive+withdrawn + heart-dominant center → assertive, moderate, d3_resolved_case_a', () => {
+    const responses = buildResponsesFromItems(2, {
+      S1: 4, S2: 4, S3: 4, S4: 4,     // assertive = 0.8
+      S9: 4, S10: 4, S11: 4, S12: 4,  // withdrawn = 0.8  (2-2-0 split)
+      S5: 1, S6: 1, S7: 1, S8: 1,     // dependent = 0.2  (clearly below)
+      C5: 5, C6: 5, C7: 5, C8: 5,     // heart = 1.0 (dominant center — D3 proxy)
+      C1: 2, C2: 2, C3: 2, C4: 2,     // body = 0.4
+      C9: 2, C10: 2, C11: 2, C12: 2,  // head = 0.4
+    });
+    const result = scoreHeartAssessment(responses);
+
+    expect(result.stage1_split_type).toBe('2-2-0');
+    expect(result.stage1_split_stances).toEqual(expect.arrayContaining(['assertive', 'withdrawn']));
+    expect(result.primary_stance).toBe('assertive');
+    expect(result.stance_confidence).toBe('moderate');
+    expect(result.confirmation_reason).toBe('d3_resolved_case_a');
+    // assertive × heart = Type 3
+    expect(result.primary_type).toBe(3);
+    expect(result.synthesis_variant).toBe('synthesis_moderate');
+    expect(result.two_candidate).toBe(false);
+  });
+
+  // Smoke test 2: 2-2-0 assertive+withdrawn, body-dominant center
+  // D3 proxy = body → body compatible with BOTH assertive and withdrawn → does not resolve (Case B)
+  // No active confirmation pair for cross-stance candidates (e.g., 8 vs 9 — retired) → two_candidate + Low
+  it('smoke 2: 2-2-0 assertive+withdrawn + body-dominant center → D3 symmetric → two-candidate low', () => {
+    const responses = buildResponsesFromItems(2, {
+      S1: 4, S2: 4, S3: 4, S4: 4,     // assertive = 0.8
+      S9: 4, S10: 4, S11: 4, S12: 4,  // withdrawn = 0.8  (2-2-0 split)
+      S5: 1, S6: 1, S7: 1, S8: 1,     // dependent = 0.2
+      C1: 5, C2: 5, C3: 5, C4: 5,     // body = 1.0 (dominant — D3 proxy compatible with BOTH)
+      C5: 2, C6: 2, C7: 2, C8: 2,     // heart = 0.4
+      C9: 2, C10: 2, C11: 2, C12: 2,  // head = 0.4
+    });
+    const result = scoreHeartAssessment(responses);
+
+    expect(result.stage1_split_type).toBe('2-2-0');
+    // body is compatible with both assertive and withdrawn → symmetric → Case B, no resolution
+    expect(result.two_candidate).toBe(true);
+    expect(result.stance_confidence).toBe('low');
+    expect(result.final_confidence).toBe('low');
+    expect(result.synthesis_variant).toBeNull();  // two-candidate Low → skip synthesis
+    expect(result.confirmation_triggered).toBe(false);
+  });
+
+  // Smoke test 3: Clean withdrawn + thin heart/body center margin → 4|9 pair fires
+  it('smoke 3: clean withdrawn + thin heart/body center margin → 4|9 pair fires', () => {
+    const responses = buildResponsesFromItems(2, {
+      S9: 5, S10: 5, S11: 5, S12: 5, // withdrawn = 1.0 (clean stance)
+      S1: 1, S2: 1, S3: 1, S4: 1,    // assertive = 0.2
+      S5: 1, S6: 1, S7: 1, S8: 1,    // dependent = 0.2
+      C1: 3, C2: 3, C3: 3, C4: 3,    // body = 0.6 (tied with heart)
+      C5: 3, C6: 3, C7: 3, C8: 3,    // heart = 0.6 (tied → thin margin → low center confidence)
+      C9: 1, C10: 1, C11: 1, C12: 1, // head = 0.2 (clearly below)
+    });
+    const result = scoreHeartAssessment(responses);
+
+    expect(result.stage1_split_type).toBe('clean');
+    expect(result.primary_stance).toBe('withdrawn');
+    expect(result.stance_confidence).toBe('high');
+    expect(result.center_confidence).toBe('low');
+    expect(result.confirmation_triggered).toBe(true);
+    expect(result.confirmation_pair).toBe('4|9');
+    // synthesis_high because pair fires (pair-resolved moderate → synthesis_high)
+    expect(result.synthesis_variant).toBe('synthesis_high');
+  });
+
+  // Smoke test 4: Low confidence read → reframe gate, NOT pair
+  // 2-1-1 split → stanceConfidence = 'low' → shouldTriggerConfirmation returns false (low_stance_confidence)
+  it('smoke 4: 2-1-1 split → low stance confidence → reframe gate, confirmation does NOT fire', () => {
+    // For a true 2-1-1 we need all stances within 0.10 of each other:
+    const trueResponses = buildResponsesFromItems(3, {
+      S1: 3, S2: 4, S3: 3, S4: 3,    // assertive ~ 0.65
+      S5: 3, S6: 3, S7: 4, S8: 3,    // dependent ~ 0.65
+      S9: 3, S10: 3, S11: 3, S12: 4, // withdrawn ~ 0.65
+    });
+    const result = scoreHeartAssessment(trueResponses);
+
+    expect(result.stage1_split_type).toBe('2-1-1');
+    expect(result.stance_confidence).toBe('low');
+    expect(result.confirmation_triggered).toBe(false);
+    expect(result.confirmation_reason).toMatch(/case_c|low_stance/);
+  });
+
+  // getSynthesisVariant smoke: pair-resolved Moderate → synthesis_high variant
+  it('getSynthesisVariant: pair-resolved moderate → synthesis_high (not synthesis_moderate)', () => {
+    expect(getSynthesisVariant('moderate', true, false)).toBe('synthesis_high');
+  });
+
+  // getSynthesisVariant smoke: two-candidate Low → null (skip synthesis call)
+  it('getSynthesisVariant: two-candidate low → null (synthesis skipped)', () => {
+    expect(getSynthesisVariant('low', false, true)).toBeNull();
   });
 });

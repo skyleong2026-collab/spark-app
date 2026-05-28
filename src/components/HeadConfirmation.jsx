@@ -17,18 +17,26 @@ export default function HeadConfirmation({ pairData, algorithmStack, onSubmit })
     <div style={wrap} className="head-confirmation">
       <style>{css}</style>
       <div style={card}>
-        <h2 style={title}>One more question</h2>
-        <p style={subtitle}>
-          Two patterns look similar but come from different cognitive roots. Pick the one that more
-          consistently describes how you operate.
+        <p style={sharedOpening}>
+          Your results show two possible patterns that look similar on the surface but come from
+          different cognitive roots. Read both descriptions. Pick the one that more consistently
+          describes how you operate.
         </p>
+
+        {pairData.scenario && (
+          <div style={scenarioBox}>
+            <p style={scenarioText}>{pairData.scenario}</p>
+            {pairData.question && (
+              <p style={questionText}>{pairData.question}</p>
+            )}
+          </div>
+        )}
 
         <div style={pairWrap}>
           <button
             style={selected === 'A' ? { ...patternBtn, ...patternBtnSelected } : patternBtn}
             onClick={() => setSelected('A')}
           >
-            <span style={patternLabel}>Pattern A</span>
             <p style={patternText}>{pairData.patternA.description}</p>
           </button>
 
@@ -36,7 +44,6 @@ export default function HeadConfirmation({ pairData, algorithmStack, onSubmit })
             style={selected === 'B' ? { ...patternBtn, ...patternBtnSelected } : patternBtn}
             onClick={() => setSelected('B')}
           >
-            <span style={patternLabel}>Pattern B</span>
             <p style={patternText}>{pairData.patternB.description}</p>
           </button>
         </div>
@@ -45,7 +52,7 @@ export default function HeadConfirmation({ pairData, algorithmStack, onSubmit })
           style={selected === 'uncertain' ? { ...cantTellBtn, ...cantTellBtnSelected } : cantTellBtn}
           onClick={() => setSelected('uncertain')}
         >
-          I can't tell which fits.
+          Neither feels right.
         </button>
 
         <button
@@ -62,12 +69,13 @@ export default function HeadConfirmation({ pairData, algorithmStack, onSubmit })
 
 const wrap = { maxWidth: 560, width: '100%', margin: '0 auto' }
 const card = { background: '#fff', borderRadius: 12, border: '0.5px solid rgba(0,0,0,0.1)', padding: '2rem 1.5rem', marginTop: '2rem' }
-const title = { fontSize: 20, fontWeight: 600, color: '#1a1a18', marginBottom: '0.5rem', textAlign: 'center' }
-const subtitle = { fontSize: 14, color: '#5f5e5a', lineHeight: 1.7, marginBottom: '1.5rem', textAlign: 'center' }
+const sharedOpening = { fontSize: 13, color: '#5f5e5a', lineHeight: 1.7, marginBottom: '1.25rem', textAlign: 'center' }
+const scenarioBox = { background: '#f8f7f4', borderRadius: 8, padding: '0.875rem 1rem', marginBottom: '1.25rem' }
+const scenarioText = { fontSize: 14, color: '#1a1a18', lineHeight: 1.65, margin: 0, marginBottom: '0.4rem' }
+const questionText = { fontSize: 14, color: '#3a3a38', lineHeight: 1.65, margin: 0, fontStyle: 'italic' }
 const pairWrap = { display: 'flex', flexDirection: 'column', gap: 12, marginBottom: '1rem' }
 const patternBtn = { background: '#fff', border: '1.5px solid rgba(0,0,0,0.12)', borderRadius: 12, padding: '1.25rem 1rem', cursor: 'pointer', textAlign: 'left', transition: 'border-color .15s, background .15s', fontFamily: 'inherit' }
 const patternBtnSelected = { borderColor: '#185fa5', background: '#f5f9ff' }
-const patternLabel = { fontSize: 12, fontWeight: 600, color: '#888', background: 'rgba(0,0,0,0.05)', padding: '2px 10px', borderRadius: 4, display: 'inline-block', marginBottom: '0.75rem' }
 const patternText = { fontSize: 14, color: '#1a1a18', lineHeight: 1.7, margin: 0 }
 const cantTellBtn = { display: 'block', width: '100%', background: 'none', border: 'none', padding: '0.75rem 0', fontSize: 14, color: '#888780', cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', marginBottom: '1.5rem' }
 const cantTellBtnSelected = { color: '#185fa5', fontWeight: 500 }

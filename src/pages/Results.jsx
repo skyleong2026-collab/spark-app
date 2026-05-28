@@ -432,10 +432,10 @@ export default function Results() {
           <ConfidenceCard
             dimension="Heart — What Drives You" icon="❤️" color="#c2185b"
             typeName={HEART_TYPE_NAMES[heartType] ?? heartType} desc={HEART_DESC[HEART_TYPE_NAMES[heartType]]}
-            confidence={heartResult?.confidence}
-            softSecondary={heartResult?.softSecondary}
-            secondaryDesc={heartResult?.softSecondary ? HEART_DESC[heartResult.softSecondary] : null}
-            isShameTriad={['Devotion','Longing','Ambition'].includes(heartType)}
+            confidence={heartResult?.final_confidence}
+            softSecondary={heartResult?.final_secondary ? HEART_TYPE_NAMES[heartResult.final_secondary] : null}
+            secondaryDesc={heartResult?.final_secondary ? HEART_DESC[HEART_TYPE_NAMES[heartResult.final_secondary]] : null}
+            isShameTriad={[2, 3, 4].includes(heartType)}
           />
           <ConfidenceCard
             dimension="Head — How You Think" icon="🧠" color="#1565c0"
@@ -454,7 +454,7 @@ export default function Results() {
               <>
                 <div style={synthUnlockedBadge}>✨ YOUR SPARK SYNTHESIS</div>
                 <div style={synthTypeLine}>
-                  {heartType || '—'} · {headType || '—'} · {handResult ? handResult.energy_phases.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' & ') : (handGeniusTypes ? idsToNames(handGeniusTypes).join(' & ') : (handLabel || '—'))}
+                  {HEART_TYPE_NAMES[heartType] ?? heartType ?? '—'} · {headType || '—'} · {handResult ? handResult.energy_phases.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' & ') : (handGeniusTypes ? idsToNames(handGeniusTypes).join(' & ') : (handLabel || '—'))}
                 </div>
                 <h2 style={synthUnlockedTitle}>{synthTitle}</h2>
                 <div style={synthDivider} />
