@@ -11,9 +11,9 @@ const HEART_TYPE_NAMES = {
   2: 'Devotion',
   3: 'Ambition',
   4: 'Longing',
-  5: 'Anticipation',
+  5: 'Wonder',
   6: 'Vigilance',
-  7: 'Wonder',
+  7: 'Anticipation',
   8: 'Intensity',
   9: 'Serenity',
 }

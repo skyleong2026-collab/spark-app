@@ -33,21 +33,36 @@ Note: `localStorage` still stores the integer Heart type (former line 290).
 That is intentional — every reader maps through `HEART_TYPE_NAMES`, so no name
 string is persisted.
 
-### src/pages/admin/TestSynthesis.jsx
+### supabase/functions/generate-synthesis/index.ts — ✅ ALREADY RESOLVED IN PRODUCTION
 
-| Line | Issue |
-|------|-------|
-| 3 | `HEART_TYPES` array uses v1 names. Dropdown values are all strings. |
-| 15 | `useState('Conviction')` — default state is a v1 name. |
-| 40 | `heartType: heart` — sends v1 string to generate-synthesis edge function. |
+⚠️ **Repo ↔ production drift.** The deployed function (version 22, live on
+project `hbazhbfhddaouxchvuxr`) is substantially newer than the copy committed
+in this repo. The deployed version already:
+- maps the integer `profile.heart_type` → name via `HEART_TYPE_NAMES`
+  (`5: Wonder, 6: Vigilance, 7: Anticipation`) in normal mode,
+- adds confidence variants (`synthesis_high/moderate/low`), verbatim
+  low-confidence reframes, and two-candidate handling (reads
+  `heart_assessments.synthesis_variant` / `final_secondary`),
+- runs on `claude-sonnet-4-6`.
 
-### supabase/functions/generate-synthesis/index.ts
+The repo's `index.ts` lacks all of the above. **Do NOT redeploy the repo copy —
+it would regress production.** Next step (separate task): pull the deployed
+source back into the repo so the backup matches reality, then keep them in sync.
 
-| Line | Issue |
-|------|-------|
-| 128-131 | `heartType: string` parameter; `heartDescriptions[heartType]` lookup keyed by v1 names. Returns `undefined` for integer input. |
-| 144 | `Heart type: ${heartType}` in prompt — renders `Heart type: 1` instead of `Heart type: Conviction`. |
-| 211, 218, 258 | `heartType` sourced from body param or `profile.heart_type` DB column — both now integers. |
+Direct mode (admin `TestSynthesis.jsx`) still passes the heart **name**
+(e.g. `Conviction`), which the function handles correctly — so the admin console
+needs no change. The names `Conviction`/`Wonder`/etc. are the current v2 SPARK
+name layer, not v1 leftovers (the v2 change was that the *type key* became an
+integer; the names are unchanged).
+
+### src/pages/Results.jsx — Heart type 5/7 name swap — ✅ RESOLVED (2026-06-05)
+
+`HEART_TYPE_NAMES` had types 5 and 7 swapped (`5: 'Anticipation', 7: 'Wonder'`),
+so type-5 (The Investigator) and type-7 (The Enthusiast) users saw the wrong
+name **and** description on the final results page. Corrected to
+`5: 'Wonder', 7: 'Anticipation'`, matching the canonical source
+(`heart/components/HeartResult.tsx`), the deployed synthesis function, and the
+v1 reference.
 
 ### src/hooks/useSaveResults.js (Heart persistence moved here from SignIn.jsx)
 
