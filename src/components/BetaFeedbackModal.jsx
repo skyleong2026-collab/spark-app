@@ -60,9 +60,6 @@ export default function BetaFeedbackModal({
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
-      const scored = QUESTIONS.map(q => scores[q.key]).filter(v => v != null)
-      const avgSat = scored.length > 0 ? scored.reduce((a, b) => a + b, 0) / scored.length : null
-
       const exemplarVersion = import.meta.env.VITE_EXEMPLAR_VERSION || 'v1.0'
 
       await supabase.from('spark_beta_feedback').insert({
@@ -92,7 +89,7 @@ export default function BetaFeedbackModal({
 
     try {
       localStorage.setItem(`spark_feedback_shown_${assessmentId}`, 'true')
-    } catch {}
+    } catch { /* localStorage unavailable — non-fatal */ }
 
     // Determine retake routing
     const scored = QUESTIONS.map(q => scores[q.key]).filter(v => v != null)
@@ -108,7 +105,7 @@ export default function BetaFeedbackModal({
       if (user?.id) {
         retakeCount = parseInt(localStorage.getItem(`spark_retake_count_${user.id}`) || '0', 10)
       }
-    } catch {}
+    } catch { /* localStorage unavailable — non-fatal */ }
 
     if (retakeCount < 3) {
       if (avgSat != null && avgSat <= 2.5 && (confLow(heartConf) || confLow(headConf))) {
@@ -145,7 +142,7 @@ export default function BetaFeedbackModal({
           localStorage.setItem(key, String(prev + 1))
         }
       })
-    } catch {}
+    } catch { /* localStorage unavailable — non-fatal */ }
     onClose()
     navigate('/assessment/heart')
   }

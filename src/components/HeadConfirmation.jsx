@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function HeadConfirmation({ pairData, algorithmStack, onSubmit }) {
+export default function HeadConfirmation({ pairData, onSubmit }) {
   const [selected, setSelected] = useState(null)
 
   function handleSubmit() {

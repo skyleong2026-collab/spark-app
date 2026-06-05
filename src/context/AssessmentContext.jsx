@@ -25,7 +25,7 @@ function store(key, value) {
   try {
     if (value != null) localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value))
     else localStorage.removeItem(key)
-  } catch {}
+  } catch { /* localStorage unavailable — non-fatal */ }
 }
 
 const KEYS = [
@@ -65,8 +65,8 @@ export function AssessmentProvider({ children }) {
   const setHandFrustrationTypes = useCallback((v) => { _setHandFrustrationTypes(v); store('spark_hand_frustrations', v) }, [])
 
   const clearAll = useCallback(() => {
-    try { KEYS.forEach(k => localStorage.removeItem(k)) } catch {}
-    try { sessionStorage.setItem('spark_fresh_start', 'true') } catch {}
+    try { KEYS.forEach(k => localStorage.removeItem(k)) } catch { /* ignore */ }
+    try { sessionStorage.setItem('spark_fresh_start', 'true') } catch { /* ignore */ }
     _setHeartType(null); _setHeartResult(null)
     _setHeadType(null); _setHeadResult(null)
     _setHandResult(null); _setHandType(null); _setHandGeniusTypes(null); _setHandFrustrationTypes(null)
@@ -79,7 +79,7 @@ export function AssessmentProvider({ children }) {
           sessionStorage.removeItem('spark_fresh_start')
         }
       }
-    } catch {}
+    } catch { /* sessionStorage unavailable — non-fatal */ }
   }, [])
 
   const setHeartTypeW = useCallback((v) => { setHeartType(v); checkFreshComplete() }, [setHeartType, checkFreshComplete])
@@ -100,6 +100,7 @@ export function AssessmentProvider({ children }) {
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook co-located with its provider by design
 export function useAssessment() {
   const ctx = useContext(AssessmentContext)
   if (!ctx) throw new Error('useAssessment must be used within AssessmentProvider')

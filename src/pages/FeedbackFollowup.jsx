@@ -23,13 +23,13 @@ export default function FeedbackFollowup() {
   const token = params.get('token')
   const response = params.get('response')
 
-  const [status, setStatus] = useState('loading') // loading | success | error
+  // Derive validity during render so the invalid state doesn't require a
+  // synchronous setState inside the effect (react-hooks/set-state-in-effect).
+  const isInvalid = !token || !response || !COPY[response]
+  const [status, setStatus] = useState(() => (isInvalid ? 'invalid' : 'loading')) // loading | success | error | invalid
 
   useEffect(() => {
-    if (!token || !response || !COPY[response]) {
-      setStatus('invalid')
-      return
-    }
+    if (isInvalid) return
 
     fetch(`${SUPABASE_URL}/functions/v1/record-followup-response`, {
       method: 'POST',

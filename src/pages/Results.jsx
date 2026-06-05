@@ -111,7 +111,7 @@ function idsToShortNames(ids) {
 }
 
 export default function Results() {
-  const { handResult, setHandResult, handType, handGeniusTypes, handFrustrationTypes, heartType, heartResult, headType, headResult, setHandType, setHandGeniusTypes, setHandFrustrationTypes, setHeartType, setHeartResult, setHeadType, setHeadResult, clearAll } = useAssessment()
+  const { handResult, setHandResult, handType, handGeniusTypes, handFrustrationTypes, heartType, heartResult, headType, headResult, setHandType, setHandGeniusTypes, setHandFrustrationTypes, setHeartType, setHeadType, clearAll } = useAssessment()
   const handComplete = !!(handResult || handType)
   const { user, loading: authLoading } = useAuth()
   const { saveResults } = useSaveResults()
@@ -297,6 +297,17 @@ export default function Results() {
   const handLabel = getHandLabel(handType)
   const handDesc = handLabel ? HAND_DESC[handLabel] : null
 
+  // Heart v2 result shape uses final_confidence / final_secondary (an integer
+  // EnneagramType), not confidence / softSecondary. Map the secondary type to
+  // its display name so the confidence qualifier renders correctly.
+  const heartConfidence = heartResult?.final_confidence
+  const heartSecondaryName = heartResult?.final_secondary != null
+    ? HEART_TYPE_NAMES[heartResult.final_secondary] ?? null
+    : null
+  // The image/shame triad is Enneagram types 2, 3, 4 (heartType may be a
+  // numeric string from storage or an integer, so coerce before comparing).
+  const heartIsShameTriad = [2, 3, 4].includes(Number(heartType))
+
   const [assessmentId, setAssessmentId] = useState(null)
   const [checkoutError, setCheckoutError] = useState(null)
   const [showFeedback, setShowFeedback] = useState(false)
@@ -313,7 +324,7 @@ export default function Results() {
 
     try {
       if (localStorage.getItem(`spark_feedback_shown_${assessmentId}`) === 'true') return
-    } catch {}
+    } catch { /* localStorage unavailable — non-fatal */ }
 
     feedbackTriggeredRef.current = true
     const t = setTimeout(() => setShowFeedback(true), 3000)
@@ -378,7 +389,7 @@ export default function Results() {
           if (handType) localStorage.setItem('spark_hand', handType)
           if (heartType) localStorage.setItem('spark_heart', heartType)
           if (headType) localStorage.setItem('spark_head', headType)
-        } catch {}
+        } catch { /* localStorage unavailable — non-fatal */ }
         console.log('[Checkout] Redirecting to:', data.url)
         window.location.href = data.url
       } else {
@@ -432,10 +443,10 @@ export default function Results() {
           <ConfidenceCard
             dimension="Heart — What Drives You" icon="❤️" color="#c2185b"
             typeName={HEART_TYPE_NAMES[heartType] ?? heartType} desc={HEART_DESC[HEART_TYPE_NAMES[heartType]]}
-            confidence={heartResult?.confidence}
-            softSecondary={heartResult?.softSecondary}
-            secondaryDesc={heartResult?.softSecondary ? HEART_DESC[heartResult.softSecondary] : null}
-            isShameTriad={['Devotion','Longing','Ambition'].includes(heartType)}
+            confidence={heartConfidence}
+            softSecondary={heartSecondaryName}
+            secondaryDesc={heartSecondaryName ? HEART_DESC[heartSecondaryName] : null}
+            isShameTriad={heartIsShameTriad}
           />
           <ConfidenceCard
             dimension="Head — How You Think" icon="🧠" color="#1565c0"
@@ -498,7 +509,7 @@ export default function Results() {
           <div style={synthCard}>
             <div style={synthOverlay}>
               <div style={lockIcon}>🔒</div>
-              <div style={synthTitle}>Your SPARK Synthesis</div>
+              <div style={synthLockedTitle}>Your SPARK Synthesis</div>
               <p style={synthBody}>
                 Your SPARK Profile combines <strong>{HEART_TYPE_NAMES[heartType] ?? heartType}</strong> + <strong>{headType}</strong> + <strong>{handResult ? handResult.energy_phases.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' + ') : handLabel}</strong> into
                 a single synthesis — showing how your motivation, thinking style, and work contribution interact, where
@@ -533,8 +544,8 @@ export default function Results() {
           heartType={HEART_TYPE_NAMES[heartType] ?? String(heartType ?? '')}
           headStack={headResult?.stack || headType || ''}
           handEnergy={handResult?.energy_phases?.map(p => p.charAt(0).toUpperCase() + p.slice(1)) ?? []}
-          heartConf={heartResult?.confidence
-            ? heartResult.confidence.charAt(0).toUpperCase() + heartResult.confidence.slice(1)
+          heartConf={heartConfidence
+            ? heartConfidence.charAt(0).toUpperCase() + heartConfidence.slice(1)
             : null}
           headConf={headResult?.confidence
             ? headResult.confidence.charAt(0).toUpperCase() + headResult.confidence.slice(1)
@@ -642,7 +653,7 @@ const HAND_V2_COLORS = {
   neutral: { bg: '#F1F0ED', text: '#4A4A47' },
 }
 
-function HandResultCard({ handResult, handType, handGeniusTypes, handLabel, handDesc }) {
+function HandResultCard({ handResult, handGeniusTypes, handLabel, handDesc }) {
   if (handResult) {
     // v2 display
     const summary = handResult.energy_phases.map(p => PHASE_LABELS[p] || p).join(' + ')
@@ -663,7 +674,7 @@ function HandResultCard({ handResult, handType, handGeniusTypes, handLabel, hand
   return <ResultCard dimension="Hand" icon="🤲" typeName={idsToNames(handGeniusTypes).join(' · ') || handLabel} desc={handDesc} color="#2e7d32" />
 }
 
-function HandDetailCard({ handResult, handType, handGeniusTypes, handFrustrationTypes, handLabel }) {
+function HandDetailCard({ handResult, handGeniusTypes, handFrustrationTypes }) {
   if (handResult) {
     // v2 display — energy/drain/neutral tiles
     return (
@@ -836,7 +847,7 @@ const lockIcon = {
   marginBottom: '0.75rem',
 }
 
-const synthTitle = {
+const synthLockedTitle = {
   fontSize: 20,
   fontWeight: 600,
   color: '#1a1a18',
