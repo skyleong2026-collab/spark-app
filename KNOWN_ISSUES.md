@@ -18,20 +18,20 @@ No Heart-related breakages. Listed for completeness.
 
 ## Phase 4: Synthesis migration + Results page rebuild
 
-### src/pages/Results.jsx
+### src/pages/Results.jsx — ✅ RESOLVED (2026-06-05)
 
-| Line | Issue |
-|------|-------|
-| 7-16 | `HEART_DESC` keyed by v1 names (`Conviction`, `Devotion`, etc.). `HEART_DESC[heartType]` returns `undefined` since `heartType` is now integer 1-9. |
-| 290 | `localStorage.setItem('spark_heart', heartType)` — stores integer. Downstream readers expected a string name. |
-| 314 | `<ResultCard typeName={heartType} desc={HEART_DESC[heartType]} .../>` — shows `1` instead of `Conviction`, desc is undefined. |
-| 345 | `typeName={heartType}` — displays integer instead of name. |
-| 346 | `confidence={heartResult?.confidence}` — v2 shape has `final_confidence`, not `confidence`. Returns `undefined`. |
-| 347 | `softSecondary={heartResult?.softSecondary}` — v2 has `final_secondary`, not `softSecondary`. Returns `undefined`. |
-| 348 | `heartResult?.softSecondary ? HEART_DESC[heartResult.softSecondary] : null` — double miss: wrong field name, wrong key type. |
-| 349 | `isShameTriad={['Devotion','Longing','Ambition'].includes(heartType)}` — string array vs integer, always false. Should be `[2,3,4].includes(heartType)`. |
-| 390 | Displays `heartType` inline — shows `1` instead of `Conviction`. |
-| 436 | Displays `heartType` in profile summary — same issue. |
+A `HEART_TYPE_NAMES` integer→name map was added and is now used at every
+display site, and the confidence/secondary reads were switched to the v2
+`HeartScoringResult` field names. Specifically:
+
+- `HEART_DESC` is keyed by name and always looked up via `HEART_TYPE_NAMES[heartType]`, so descriptions resolve again.
+- `ResultCard` / `ConfidenceCard` / synthesis type-line / locked-card / feedback-modal all render the type **name**, not the raw integer.
+- `confidence` now reads `heartResult.final_confidence`; the soft secondary reads `heartResult.final_secondary` and maps it through `HEART_TYPE_NAMES` for both the label and its description.
+- `isShameTriad` now compares `[2, 3, 4].includes(Number(heartType))`.
+
+Note: `localStorage` still stores the integer Heart type (former line 290).
+That is intentional — every reader maps through `HEART_TYPE_NAMES`, so no name
+string is persisted.
 
 ### src/pages/admin/TestSynthesis.jsx
 
@@ -49,13 +49,13 @@ No Heart-related breakages. Listed for completeness.
 | 144 | `Heart type: ${heartType}` in prompt — renders `Heart type: 1` instead of `Heart type: Conviction`. |
 | 211, 218, 258 | `heartType` sourced from body param or `profile.heart_type` DB column — both now integers. |
 
-### src/pages/SignIn.jsx
+### src/hooks/useSaveResults.js (Heart persistence moved here from SignIn.jsx)
 
 | Line | Issue |
 |------|-------|
-| 22 | `resultType: heartType` inserted into `assessments.result_type` — now integer, column may expect text. |
-| 40 | `profileData.heart_type = heartType` — writes integer to `profiles.heart_type`, may expect text. |
-| 41 | `heartResult?.confidence` — v2 shape has `final_confidence`, not `confidence`. Returns `undefined`. |
+| 33-38 | `result_type: heartType` inserted into `assessments.result_type` (text column) — heartType is a numeric string from storage, coerces fine. Not a defect in practice. |
+| 55 | `profileData.heart_type = heartType` → `profiles.heart_type` is `text`; numeric-string value stores fine. Not a defect in practice. |
+| 56 | ✅ RESOLVED (2026-06-05) — was `heartResult?.confidence` (always `undefined`); now reads `heartResult.final_confidence`, so `profiles.heart_confidence` (verified text column) is populated. |
 
 ## Phase 5: Auth handoff
 

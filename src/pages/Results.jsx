@@ -465,7 +465,7 @@ export default function Results() {
               <>
                 <div style={synthUnlockedBadge}>✨ YOUR SPARK SYNTHESIS</div>
                 <div style={synthTypeLine}>
-                  {heartType || '—'} · {headType || '—'} · {handResult ? handResult.energy_phases.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' & ') : (handGeniusTypes ? idsToNames(handGeniusTypes).join(' & ') : (handLabel || '—'))}
+                  {HEART_TYPE_NAMES[heartType] ?? heartType ?? '—'} · {headType || '—'} · {handResult ? handResult.energy_phases.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' & ') : (handGeniusTypes ? idsToNames(handGeniusTypes).join(' & ') : (handLabel || '—'))}
                 </div>
                 <h2 style={synthUnlockedTitle}>{synthTitle}</h2>
                 <div style={synthDivider} />
