@@ -29,6 +29,7 @@ function store(key, value) {
 }
 
 const KEYS = [
+  'spark_opening', 'spark_opening_complete',
   'spark_hand', 'spark_hand_geniuses', 'spark_hand_frustrations', 'spark_hand_result',
   'spark_heart', 'spark_heart_result',
   'spark_head', 'spark_head_result',
