@@ -1,6 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAssessment } from '../context/AssessmentContext'
 
+const OPENING_ENABLED = import.meta.env.VITE_OPENING_ENABLED === 'true'
+const ASSESSMENT_START = OPENING_ENABLED ? '/assessment/opening' : '/assessment/heart'
+
 export default function Landing() {
   const navigate = useNavigate()
   const { handResult, handType, heartType, headType, clearAll } = useAssessment()
@@ -8,7 +11,8 @@ export default function Landing() {
 
   function handleRetake() {
     clearAll()
-    navigate('/assessment/heart')
+    try { sessionStorage.removeItem('spark_opening_done') } catch {}
+    navigate(ASSESSMENT_START)
   }
 
   return (
@@ -18,7 +22,7 @@ export default function Landing() {
         <p style={{ fontSize: 16, color: '#5f5e5a', lineHeight: 1.7, marginBottom: '2rem' }}>
           Discover how your heart, head, and hands work together — in 10 minutes.
         </p>
-        <Link to="/assessment/heart" style={{
+        <Link to={ASSESSMENT_START} style={{
           display: 'inline-block', padding: '14px 32px', background: '#1a1a18', color: '#fff',
           borderRadius: 8, fontSize: 15, fontWeight: 500, textDecoration: 'none',
         }}>

@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import Landing from './pages/Landing'
+import Opening from './assessments/opening/Opening'
 import AssessmentHand from './assessments/hand/HandAssessment'
 import AssessmentHeart from './assessments/heart/HeartAssessment'
 import AssessmentHead from './pages/AssessmentHead'
@@ -15,6 +16,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Landing />} />
+      <Route path="/assessment/opening" element={<Opening />} />
       <Route path="/assessment/hand" element={<AssessmentHand />} />
       <Route path="/assessment/heart" element={<AssessmentHeart />} />
       <Route path="/assessment/head" element={<AssessmentHead />} />
