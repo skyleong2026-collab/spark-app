@@ -191,15 +191,7 @@ function getPathAQuestion(step) {
   }
 
   function resolvePathA(ans) {
-    // E/I from Q9 + Q9b
-    const q9e = ans.Q9 === 'a' ? 1 : 0
-    const q9be = ans.Q9b === 'a' ? 1 : 0
-    const eiScore = q9e + q9be
-    const ei = eiScore >= 1 && q9e + q9be >= 1 ? (eiScore >= 2 ? 'E' : (q9e === 1 ? 'E' : 'I')) : 'I'
-    // Simpler: majority A = E, majority B = I
-    const eiResult = (ans.Q9 === 'a' ? 1 : 0) + (ans.Q9b === 'a' ? 1 : 0) >= 1 ?
-      ((ans.Q9 === 'a' ? 1 : 0) + (ans.Q9b === 'a' ? 1 : 0) >= 2 ? 'E' : (ans.Q9 === 'a' ? 'E' : 'I')) : 'I'
-    // Even simpler: both A = E, both B = I, split = use Q9
+    // E/I from Q9 + Q9b: both A = E, both B = I, split = use Q9
     let finalEI
     const eiConsistent = ans.Q9 === ans.Q9b
     if (ans.Q9 === 'a' && ans.Q9b === 'a') finalEI = 'E'

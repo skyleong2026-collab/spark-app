@@ -53,7 +53,7 @@ export function useSaveResults() {
     if (handType) profileData.hand_type = handType
     if (handFrustrationTypes) profileData.hand_frustration_types = handFrustrationTypes
     if (heartType) profileData.heart_type = heartType
-    if (heartResult?.confidence) profileData.heart_confidence = heartResult.confidence
+    if (heartResult?.final_confidence) profileData.heart_confidence = heartResult.final_confidence
     if (headType) profileData.head_type = headType
     if (headResult?.confidence) profileData.head_confidence = headResult.confidence
     if (headResult?.path) profileData.head_path = headResult.path
